@@ -8,37 +8,39 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-st.set_page_config(page_title="半導體大戶戰情室-Pro版", layout="wide")
+# 1. 頁面配置
+st.set_page_config(page_title="半導體大戶戰情室-深度強化版", layout="wide")
 
-# CSS
+# 2. 注入自定義 CSS (美化卡片)
 st.markdown("""
-<style>
-.status-card { padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e0e0e0; box-shadow: 2px 2px 10px rgba(0,0,0,0.08); }
-.🚨 { background-color: #ffebee; border-left: 12px solid #d32f2f; }
-.⚠️ { background-color: #fffde7; border-left: 12px solid #fbc02d; }
-.✅ { background-color: #e8f5e9; border-left: 12px solid #388e3c; }
-.☢️ { background-color: #fce4ec; border-left: 12px solid #c2185b; }
-.🔎 { background-color: #ffffff; border-left: 12px solid #455a64; }
-.metric-tag { padding: 4px 10px; background: rgba(0,0,0,0.06); border-radius: 6px; margin-right: 10px; font-size: 0.9em; font-weight: bold; }
-</style>
-""", unsafe_allow_html=True)
+    <style>
+    .status-card { padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e0e0e0; box-shadow: 2px 2px 10px rgba(0,0,0,0.08); }
+    .🚨 { background-color: #ffebee; border-left: 12px solid #d32f2f; color: #b71c1c; }
+    .⚠️ { background-color: #fffde7; border-left: 12px solid #fbc02d; color: #827717; }
+    .✅ { background-color: #e8f5e9; border-left: 12px solid #388e3c; color: #1b5e20; }
+    .☢️ { background-color: #fce4ec; border-left: 12px solid #c2185b; color: #880e4f; }
+    .💤 { background-color: #f5f5f5; border-left: 12px solid #9e9e9e; color: #424242; }
+    .🔎 { background-color: #ffffff; border-left: 12px solid #455a64; color: #263238; }
+    .metric-tag { display: inline-block; padding: 4px 10px; background: rgba(0,0,0,0.06); border-radius: 6px; margin-right: 10px; font-size: 0.9em; font-weight: bold; }
+    .price-sub { font-size: 0.85em; color: #666; margin-top: 5px; }
+    /* 倒數計時樣式 */
+    .timer-container { text-align: right; color: #e65100; font-weight: bold; font-size: 1.2em; padding: 10px; border: 1px solid #ffcc80; border-radius: 10px; background: #fff8e1; display: inline-block; float: right; }
+    </style>
+    """, unsafe_allow_html=True)
 
+# 核心追蹤清單
 tickers = {
-    "NVDA": "輝達",
-    "MU": "美光",
-    "2330.TW": "台積電",
-    "2303.TW": "聯電",
-    "6770.TW": "力積電"
+    "MU": "美光", "INTC": "英特爾", "000660.KS": "海力士", 
+    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創",
+    "2330.TW": "台積電", "NVDA": "輝達"
 }
 
 def get_volume_support(df):
     try:
         recent_df = df.tail(120)
-        v_hist = np.histogram(recent_df['Close'], bins=12, weights=recent_df['Volume'])
-        idx = np.argmax(v_hist[0])
-        return (v_hist[1][idx] + v_hist[1][idx+1]) / 2
-    except:
-        return 0
+        v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
+        return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
+    except: return 0
 
 def get_google_news(keyword):
     news = []
@@ -47,122 +49,110 @@ def get_google_news(keyword):
         feed = feedparser.parse(url)
         for entry in feed.entries[:3]:
             news.append(f"• [{entry.title}]({entry.link})")
-    except:
-        pass
+    except: pass
     return news
 
-st.title("🚀 半導體戰情室 Pro（策略升級版）")
+# 頂部抬頭與倒數計時器
+col_title, col_timer = st.columns([3, 1])
+with col_title:
+    st.title("🚀 半導體「大戶動向」全數據深度戰情室")
+with col_timer:
+    timer_placeholder = st.empty()
 
 data_list = []
 news_dict = {}
 
-for ticker, name in tickers.items():
-    try:
-        stock = yf.Ticker(ticker)
-        df = stock.history(period="1y")
+with st.spinner('正在分析大戶筹碼與深度技術指標...'):
+    for ticker, name in tickers.items():
+        try:
+            stock = yf.Ticker(ticker)
+            df = stock.history(period="1y")
+            if df.empty: continue
+            
+            close = df['Close'].iloc[-1]
+            ma20 = df['Close'].rolling(20).mean().iloc[-1]
+            std20 = df['Close'].rolling(20).std().iloc[-1]
+            tech_sup = ma20 - (2 * std20)   # 技術支撐 (下軌)
+            tech_press = ma20 + (2 * std20) # 建議賣出 (上軌)
+            chip_floor = get_volume_support(df) # 籌碼地板
+            buy_price = (tech_sup + chip_floor) / 2 # 綜合建議買入價
+            bias = ((close - ma20) / ma20) * 100 # 乖離率
+            
+            y_data = df['Close'].tail(10).values
+            slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), y_data.reshape(-1,1)).coef_[0][0] / y_data.mean()) * 100
+            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
 
-        if df.empty:
-            continue
+            info = stock.info
+            pe_val = info.get('forwardPE', "無數據")
+            inst_pct = info.get('heldPercentInstitutions', 0) * 100
+            insider_pct = info.get('heldPercentInsiders', 0) * 100
 
-        close = df['Close'].iloc[-1]
+            # 診斷邏輯
+            if vol_ratio > 2.2 and abs(slope) < 0.1 and close > ma20:
+                icon, style, status = "🚨", "🚨", f"🚨 【危險：大戶出貨】成交量暴增至 {vol_ratio:.1f} 倍但股價停滯。建議大幅減碼。目前正乖離率 {bias:.1f}%。"
+            elif close >= tech_press * 0.97:
+                icon, style, status = "⚠️", "⚠️", f"⚠️ 【分批停利】現價已接近壓力位 {tech_press:.2f}。建議將獲利分批落袋為安。"
+            elif close <= buy_price * 1.03 and slope > -0.15:
+                icon, style, status = "✅", "✅", f"✅ 【買入訊號】回測支撐區 {buy_price:.2f}。適合在此分批佈局中長線部位。"
+            elif close <= tech_sup:
+                icon, style, status = "☢️", "☢️", f"☢️ 【警示：破位重挫】擊穿關鍵技術支撐 {tech_sup:.2f}。請務必執行停損。"
+            else:
+                icon, style, status = "🔎", "🔎", f"🔎 【正常波動】於壓力位 {tech_press:.2f} 與支撐位 {tech_sup:.2f} 之間健康整理。"
 
-        # === 技術指標 ===
-        ma20 = df['Close'].rolling(20).mean().iloc[-1]
-        std20 = df['Close'].rolling(20).std().iloc[-1]
+            data_list.append({
+                "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close, 2),
+                "buy": round(buy_price, 2), "sell": round(tech_press, 2), "pe": pe_val,
+                "vol": round(vol_ratio, 2), "slope": f"{slope:.2f}%", "diag": status,
+                "inst": f"{inst_pct:.1f}%", "insider": f"{insider_pct:.1f}%",
+                "tech_sup": round(tech_sup, 2), "chip_floor": round(chip_floor, 2), "bias": round(bias, 2)
+            })
+            news_dict[name] = get_google_news(name)
+        except: pass
 
-        tech_sup = ma20 - 2 * std20
-        tech_press = ma20 + 2 * std20
-
-        chip_floor = get_volume_support(df)
-
-        # ✅ 修正買點（取強支撐）
-        base_buy = max(tech_sup, chip_floor)
-
-        # === 趨勢判斷 ===
-        trend_strength = (close - df['Close'].iloc[-60]) / df['Close'].iloc[-60] * 100
-
-        if trend_strength > 20:
-            market_type = "trend"
-        elif trend_strength < -20:
-            market_type = "down"
-        else:
-            market_type = "range"
-
-        # === 買點依市場類型 ===
-        if market_type == "trend":
-            buy_price = ma20
-        elif market_type == "range":
-            buy_price = base_buy
-        else:
-            buy_price = tech_sup * 0.97
-
-        # === 趨勢斜率（20日）===
-        y_data = df['Close'].tail(20).values
-        slope = (LinearRegression().fit(np.arange(20).reshape(-1,1), y_data.reshape(-1,1)).coef_[0][0] / y_data.mean()) * 100
-
-        # === 量能 ===
-        vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-5:-1].mean()
-        volume_confirm = vol_ratio > 1.2
-
-        # === 停利線 ===
-        stop_profit = df['High'].tail(5).max() * 0.97
-
-        # === 風報比 ===
-        risk_reward = (tech_press - close) / (close - tech_sup) if close > tech_sup else 0
-
-        # === 診斷邏輯 ===
-        if vol_ratio > 2 and slope < 0.1 and close < df['High'].tail(5).max():
-            icon, style, msg = "🚨", "🚨", "【主力出貨】放量卻不創高"
-        elif close <= buy_price * 1.03 and volume_confirm and slope > -0.2 and risk_reward > 1.5:
-            icon, style, msg = "✅", "✅", f"【可布局】接近支撐 {buy_price:.2f}"
-        elif close <= tech_sup:
-            icon, style, msg = "☢️", "☢️", "【破位】跌破支撐需停損"
-        elif close >= tech_press * 0.97:
-            icon, style, msg = "⚠️", "⚠️", "【壓力區】建議減碼"
-        else:
-            icon, style, msg = "🔎", "🔎", "【觀望】等待方向"
-
-        data_list.append({
-            "name": f"{name} ({ticker})",
-            "price": round(close,2),
-            "buy": round(buy_price,2),
-            "sell": round(tech_press,2),
-            "stop": round(stop_profit,2),
-            "vol": round(vol_ratio,2),
-            "trend": market_type,
-            "rr": round(risk_reward,2),
-            "msg": msg,
-            "icon": icon,
-            "style": style
-        })
-
-        news_dict[name] = get_google_news(name)
-
-    except:
-        pass
-
-# === 顯示 ===
+# --- 介面渲染 ---
 for d in data_list:
     st.markdown(f"""
     <div class="status-card {d['style']}">
-        <h3>{d['icon']} {d['name']} - ${d['price']}</h3>
-        <p>{d['msg']}</p>
-        <p>📈 趨勢: {d['trend']} | 成交量: {d['vol']}x | 風報比: {d['rr']}</p>
-        <p>🟢 買點: {d['buy']} | 🔴 壓力: {d['sell']} | 🛡️ 停利線: {d['stop']}</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
+                <span style="font-size: 1.8em; margin-left: 20px; font-family: monospace; color: #212529;">${d['price']}</span>
+                <div class="price-sub">乖離率: {d['bias']}% | 成交量比: {d['vol']}x</div>
+            </div>
+            <div style="text-align: right;">
+                <span class="metric-tag">預估本益比: {d['pe']}</span>
+                <span class="metric-tag">法人持股: {d['inst']}</span>
+                <span class="metric-tag">大戶持股: {d['insider']}</span>
+            </div>
+        </div>
+        <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.15);">
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 3; font-size: 1.1em; line-height: 1.6;">
+                <b>🔍 深度診斷報告：</b><br>{d['diag']}
+            </div>
+            <div style="flex: 1; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 8px; border: 1px dashed #ccc;">
+                <b>📊 關鍵位參考：</b><br>
+                建議買入價：<span style="color:#388e3c; font-weight:bold;">{d['buy']}</span><br>
+                🎯 建議停利價：<span style="color:#d32f2f; font-weight:bold;">{d['sell']}</span><br>
+                <div style="margin-top: 8px; font-size: 0.85em; color: #555; border-top: 1px solid #eee; padding-top: 5px;">
+                    技術支撐：{d['tech_sup']}<br>
+                    籌碼地板：{d['chip_floor']}
+                </div>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-# === 側邊新聞 ===
-st.sidebar.title("📰 新聞")
+# 側邊欄
+st.sidebar.title("📰 即時新聞推播")
 for name, news in news_dict.items():
     if news:
-        with st.sidebar.expander(name):
-            for n in news:
-                st.markdown(n)
+        with st.sidebar.expander(f"{name}"):
+            for n in news: st.markdown(n)
 
-# === 自動刷新 ===
+# --- 倒數計時邏輯 ---
 for i in range(60, 0, -1):
-    st.sidebar.markdown(f"⏱ {i}s refresh")
+    timer_placeholder.markdown(f"<div class='timer-container'>🔄 {i} 秒後自動重整</div>", unsafe_allow_html=True)
     time.sleep(1)
 
 st.rerun()
