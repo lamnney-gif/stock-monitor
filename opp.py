@@ -8,8 +8,8 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-# 1. 頁面配置 (這行必須在最前面)
-st.set_page_config(page_title="半導體大戶全數據戰情室", layout="wide")
+# 1. 頁面配置
+st.set_page_config(page_title="半導體大戶全中文戰情室", layout="wide")
 
 # 2. 自定義樣式 (美化卡片)
 st.markdown("""
@@ -50,80 +50,79 @@ def get_google_news(keyword):
     return news
 
 # 頂部抬頭
-st.title("🚀 半導體「大戶動向」全數據戰情室")
+st.title("🚀 半導體「大戶動向」全中文戰情室")
 st.caption(f"最後更新時間：{datetime.now().strftime('%H:%M:%S')} (每 60 秒自動刷新)")
 
 data_list = []
 news_dict = {}
 
 # 數據運算
-with st.spinner('正在分析籌碼與技術指標...'):
+with st.spinner('正在分析籌碼與支撐壓力指標...'):
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             if df.empty: continue
             
-            # --- 價格運算 ---
             close = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
-            t_sup = ma20 - (2 * std20)
-            t_press = ma20 + (2 * std20)
-            c_floor = get_volume_support(df)
-            buy_price = (t_sup + c_floor) / 2
+            tech_sup = ma20 - (2 * std20) # 技術支撐
+            tech_press = ma20 + (2 * std20) # 壓力位
+            chip_floor = get_volume_support(df) # 籌碼地板
+            buy_price = (tech_sup + chip_floor) / 2 # 建議買入價
             
-            # --- 技術指標 ---
+            # 斜率
             y = df['Close'].tail(10).values
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), y.reshape(-1,1)).coef_[0][0] / y.mean()) * 100
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
 
-            # --- 籌碼與估值 ---
+            # 籌碼數據
             info = stock.info
-            pe = info.get('forwardPE', "N/A")
-            inst = info.get('heldPercentInstitutions', 0) * 100
-            insider = info.get('heldPercentInsiders', 0) * 100
+            pe_val = info.get('forwardPE', "無數據")
+            inst_pct = info.get('heldPercentInstitutions', 0) * 100
+            insider_pct = info.get('heldPercentInsiders', 0) * 100
 
-            # --- 診斷邏輯 ---
+            # 診斷邏輯
             if vol_ratio > 2.0 and abs(slope) < 0.1 and close > ma20:
-                icon, style, status = "🚨", "🚨", "【大戶倒貨】爆量但股價不漲，疑似高檔換手，建議減碼。"
-            elif close >= t_press * 0.98:
-                icon, style, status = "⚠️", "⚠️", f"【分批停利】逼近壓力位 {t_press:.2f}。短線過熱，建議獲利入袋。"
+                icon, style, status = "🚨", "🚨", "【大戶倒貨】爆量但股價不漲，疑似大戶正在高檔出貨，請小心。"
+            elif close >= tech_press * 0.98:
+                icon, style, status = "⚠️", "⚠️", f"【分批停利】逼近壓力位 {tech_press:.2f}。股價過熱，建議先獲利了結。"
             elif vol_ratio < 0.8 and abs(slope) < 0.05:
-                icon, style, status = "💤", "💤", "【縮量整理】量能萎縮且趨勢持平，建議觀望。"
+                icon, style, status = "💤", "💤", "【縮量整理】交易清淡且股價橫盤，暫無大行情，建議觀望。"
             elif close <= buy_price * 1.02 and slope > -0.1:
-                icon, style, status = "✅", "✅", f"【買入訊號】回測黃金支撐點 {buy_price:.2f}，適合佈局。"
-            elif close <= t_sup:
-                icon, style, status = "☢️", "☢️", f"【停損警示】破位重挫！跌穿支撐 {t_sup:.2f}，請保命。"
+                icon, style, status = "✅", "✅", f"【買入訊號】回測支撐點 {buy_price:.2f}。大戶成本區有守，適合佈局。"
+            elif close <= tech_sup:
+                icon, style, status = "☢️", "☢️", f"【停損警示】股價跌穿技術支撐 {tech_sup:.2f}。趨勢走空，請保命停損。"
             else:
-                icon, style, status = "🔎", "🔎", f"【正常整理】目前在區間波動，斜率 {slope:.2f}%。"
+                icon, style, status = "🔎", "🔎", f"【正常波動】於區間內整理。目前斜率為 {slope:.2f}%，量能穩定。"
 
             data_list.append({
                 "icon": icon, "style": style, "name": f"{name}({ticker})", "price": round(close, 2),
-                "buy": round(buy_price, 2), "sell": round(t_press, 2), "pe": pe,
+                "buy": round(buy_price, 2), "sell": round(tech_press, 2), "pe": pe_val,
                 "vol": round(vol_ratio, 2), "slope": f"{slope:.2f}%", "diag": status,
-                "inst": f"{inst:.1f}%", "insider": f"{insider:.1f}%"
+                "inst": f"{inst_pct:.1f}%", "insider": f"{insider_pct:.1f}%"
             })
             news_dict[name] = get_google_news(name)
         except: pass
 
-# 渲染畫面
+# 渲染卡片介面
 for d in data_list:
     st.markdown(f"""
     <div class="status-card {d['style']}">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="font-size: 1.4em; font-weight: bold;">{d['icon']} {d['name']} | 現價: {d['price']}</div>
             <div>
-                <span class="metric-tag">PE: {d['pe']}</span>
-                <span class="metric-tag">法人: {d['inst']}</span>
-                <span class="metric-tag">內部: {d['insider']}</span>
+                <span class="metric-tag">本益比: {d['pe']}</span>
+                <span class="metric-tag">法人持股: {d['inst']}</span>
+                <span class="metric-tag">大戶持股: {d['insider']}</span>
             </div>
         </div>
-        <div style="margin: 12px 0; font-size: 1.05em;"><b>智慧分析：</b> {d['diag']}</div>
+        <div style="margin: 12px 0; font-size: 1.05em;"><b>智慧診斷：</b> {d['diag']}</div>
         <div style="font-size: 0.9em; color: #666;">
-            量比: {d['vol']} | 斜率: {d['slope']} | 
-            建議買入: <span style="color:green; font-weight:bold;">{d['buy']}</span> | 
-            建議賣出: <span style="color:red; font-weight:bold;">{d['sell']}</span>
+            成交量比: {d['vol']} | 趨勢斜率: {d['slope']} | 
+            建議買入價: <span style="color:green; font-weight:bold;">{d['buy']}</span> | 
+            建議賣出價: <span style="color:red; font-weight:bold;">{d['sell']}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -135,6 +134,6 @@ for name, news in news_dict.items():
         with st.sidebar.expander(f"{name}"):
             for n in news: st.markdown(n)
 
-# 自動重新整理
+# 每 60 秒刷新一次
 time.sleep(60)
 st.rerun()
