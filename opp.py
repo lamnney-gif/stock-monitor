@@ -1,121 +1,123 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import time
+import feedparser
 from datetime import datetime
+from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
+import time
 
-# 1. 頁面設置
-st.set_page_config(page_title="半導體大戶戰情室", layout="wide")
+# 1. 頁面配置
+st.set_page_config(page_title="半導體大戶戰情室-防線強化版", layout="wide")
 
-# 2. 定義 CSS 與 HTML 模板 (確保垂直排列與寬大螢幕)
-def generate_html(results, last_update):
-    table_rows = ""
-    for r in results:
-        table_rows += f"""
-        <tr class="{r['style']}">
-            <td style="font-size:24px; text-align:center;">{r['icon']}</td>
-            <td style="font-weight:bold; text-align:center;">{r['name']}</td>
-            <td style="font-size:18px; font-family:monospace; font-weight:bold; text-align:center;">{r['price']}</td>
-            <td>
-                <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="color:#198754; font-weight:bold; font-size:1.1em;">進：{r['buy']}</div>
-                    <div style="color:#d32f2f; font-weight:bold; font-size:1.1em; border-top:1px dashed #bbb; margin-top:4px; padding-top:4px; width:90px; text-align:center;">利：{r['sell']}</div>
-                </div>
-            </td>
-            <td style="text-align:center;">{r['sup']}</td>
-            <td style="text-align:center;">{r['floor']}</td>
-            <td style="text-align:center;">{r['stop']}</td>
-            <td style="text-align:center;">{r['vol']}x</td>
-            <td style="text-align:center;">{r['slope']}</td>
-            <td style="padding:10px; line-height:1.5;"><b>{r['diag']}</b></td>
-        </tr>
-        """
-
-    return f"""
+# 2. 注入自定義 CSS
+st.markdown("""
     <style>
-        table {{ width: 100%; border-collapse: collapse; font-family: "Microsoft JhengHei", sans-serif; }}
-        th {{ background-color: #212529; color: white; padding: 12px; font-size: 14px; border: 1px solid #444; }}
-        td {{ border: 1px solid #dee2e6; padding: 8px; font-size: 14px; }}
-        .row-alert {{ background-color: #fff3e0; }}
-        .row-success {{ background-color: #e8f5e9; }}
-        .row-info {{ background-color: #e3f2fd; }}
-        .row-danger {{ background-color: #ffebee; }}
+    .status-card { padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e0e0e0; box-shadow: 2px 2px 10px rgba(0,0,0,0.08); }
+    .🚨 { background-color: #ffebee; border-left: 12px solid #d32f2f; color: #b71c1c; }
+    .⚠️ { background-color: #fffde7; border-left: 12px solid #fbc02d; color: #827717; }
+    .✅ { background-color: #e8f5e9; border-left: 12px solid #388e3c; color: #1b5e20; }
+    .☢️ { background-color: #fce4ec; border-left: 12px solid #c2185b; color: #880e4f; }
+    .💤 { background-color: #f5f5f5; border-left: 12px solid #9e9e9e; color: #424242; }
+    .🔎 { background-color: #ffffff; border-left: 12px solid #455a64; color: #263238; }
+    .metric-tag { display: inline-block; padding: 4px 10px; background: rgba(0,0,0,0.06); border-radius: 6px; margin-right: 10px; font-size: 0.9em; font-weight: bold; }
+    .profit-line { background-color: #fff3e0; color: #e65100; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 1px dashed #e65100; }
     </style>
-    <table>
-        <thead>
-            <tr>
-                <th>燈號</th><th>股票名稱</th><th>目前現價</th>
-                <th style="background-color: #fff3e0; color: #e65100;">💡 買入 / 停利點</th>
-                <th>技術支撐</th><th>籌碼地板</th><th>停利防線</th><th>量比</th><th>斜率</th><th>📊 智慧診斷建議</th>
-            </tr>
-        </thead>
-        <tbody>
-            {table_rows}
-        </tbody>
-    </table>
-    <div style="text-align:right; color:#666; font-size:12px; margin-top:10px;">最後更新：{last_update}</div>
-    """
+    """, unsafe_allow_html=True)
 
-# --- 主程式邏輯 ---
-st.title("🚀 半導體「大戶動向」戰情室")
-timer_placeholder = st.sidebar.empty()
-
-# 追蹤清單
 tickers = {
     "MU": "美光", "INTC": "英特爾", "000660.KS": "海力士", 
-    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", 
-    "3481.TW": "群創", "2330.TW": "台積電", "NVDA": "輝達"
+    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創",
+    "2330.TW": "台積電", "NVDA": "輝達"
 }
 
-results = []
-with st.spinner('同步數據中...'):
+def get_volume_support(df):
+    try:
+        recent_df = df.tail(120)
+        v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
+        return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
+    except: return 0
+
+st.title("🚀 半導體「大戶動向」防線監控站")
+st.caption(f"數據自動刷新：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+data_list = []
+
+with st.spinner('正在掃描全球籌碼防線...'):
     for ticker, name in tickers.items():
         try:
-            s = yf.Ticker(ticker)
-            df = s.history(period="1y")
+            stock = yf.Ticker(ticker)
+            df = stock.history(period="1y")
             if df.empty: continue
             
-            curr = df['Close'].iloc[-1]
-            m20 = df['Close'].rolling(20).mean().iloc[-1]
-            s20 = df['Close'].rolling(20).std().iloc[-1]
+            close = df['Close'].iloc[-1]
+            high_5d = df['High'].tail(5).max() # 近5日最高點
+            ma20 = df['Close'].rolling(20).mean().iloc[-1]
+            std20 = df['Close'].rolling(20).std().iloc[-1]
             
-            tp_price = m20 + (2 * s20)
-            supp_tech = m20 - (2 * s20)
+            # --- 防線運算 ---
+            tech_sup = ma20 - (2 * std20)   # 技術支撐 (下軌)
+            tech_press = ma20 + (2 * std20) # 建議預期賣價 (上軌)
+            chip_floor = get_volume_support(df) # 籌碼地板 (大戶成本)
             
-            # 籌碼地板
-            v_hist = np.histogram(df.tail(120)['Close'], bins=10, weights=df.tail(120)['Volume'])
-            idx = np.argmax(v_hist[0])
-            floor_chip = (v_hist[1][idx] + v_hist[1][idx+1]) / 2
+            # 停利防線：取「近5日高點打95折」或「月線(MA20)」的較高者
+            # 這能確保股價衝高回落 5% 或跌破月線時提醒你
+            profit_defense = max(high_5d * 0.95, ma20) 
             
-            buy_suggest = (supp_tech + floor_chip) / 2
-            stop_profit = df['High'].tail(5).max() * 0.97
-            vol_r = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
-            slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / curr) * 100
+            bias = ((close - ma20) / ma20) * 100
+            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
 
-            style, icon, note = "", "🔎", f"於 {supp_tech:.2f} 支撐與 {tp_price:.2f} 壓力之間震盪。"
-            if vol_r > 2.0 and abs(slope) < 0.1: style, icon, note = "row-alert", "🚨", "🚨 【大戶倒貨】高檔爆量不漲，建議減碼。"
-            elif curr >= tp_price * 0.98: style, icon, note = "row-info", "⚠️", f"⚠️ 【分批停利】接近停利點 {tp_price:.2f}。"
-            elif curr <= buy_suggest * 1.02: style, icon, note = "row-success", "✅", f"✅ 【買入訊號】回測支撐區 {buy_suggest:.2f}。"
-            elif curr < supp_tech: style, icon, note = "row-danger", "☢️", f"☢️ 【破位警示】跌穿技術支撐 {supp_tech:.2f}。"
+            # --- 智慧診斷與防線狀態 ---
+            if close < profit_defense:
+                icon, style, status = "☢️", "☢️", f"☢️ 【防線失守】股價已跌破停利防線 {profit_defense:.2f}。目前趨勢走弱，建議「獲利了結」或「減碼觀望」，守住現有戰果！"
+            elif close >= tech_press * 0.97:
+                icon, style, status = "⚠️", "⚠️", f"⚠️ 【分批停利】股價衝向壓力位 {tech_press:.2f}。目前正乖離 {bias:.1f}%。雖然還在防線上，但已過熱，建議先收割一部分獲利。"
+            elif close <= (tech_sup + chip_floor)/2 * 1.03:
+                icon, style, status = "✅", "✅", f"✅ 【支撐區】股價回測籌碼地板 {chip_floor:.2f} 附近。這裡是大戶的防線，只要不破，就是長線佈局的好時機。"
+            else:
+                icon, style, status = "🔎", "🔎", f"🔎 【防線安全】目前股價穩守在防線 {profit_defense:.2f} 之上。只要沒跌破，就繼續抱著讓獲利奔跑。"
 
-            results.append({
-                "icon": icon, "style": style, "name": f"{name}({ticker})", "price": f"{curr:.2f}",
-                "buy": f"{buy_suggest:.2f}", "sell": f"{tp_price:.2f}", "sup": f"{supp_tech:.2f}",
-                "floor": f"{floor_chip:.2f}", "stop": f"{stop_profit:.2f}", "vol": f"{vol_r:.2f}",
-                "slope": f"{slope:.2f}%", "diag": note
+            data_list.append({
+                "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close, 2),
+                "profit_line": round(profit_defense, 2), "sell": round(tech_press, 2),
+                "vol": round(vol_ratio, 2), "diag": status, "bias": round(bias, 2),
+                "tech_sup": round(tech_sup, 2), "chip_floor": round(chip_floor, 2)
             })
         except: pass
 
-# 渲染 HTML 組件 (設置高度為 800px 確保不被切掉)
-last_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-components.html(generate_html(results, last_time), height=800, scrolling=True)
+# --- 介面渲染 ---
+for d in data_list:
+    st.markdown(f"""
+    <div class="status-card {d['style']}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
+                <span style="font-size: 1.8em; margin-left: 20px; font-family: monospace;">${d['price']}</span>
+                <div style="margin-top:8px;">
+                    <span class="profit-line">🛡️ 停利防線：{d['profit_line']}</span>
+                    <span style="font-size: 0.85em; color: #666; margin-left:10px;">(跌破請考慮離場)</span>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span class="metric-tag">乖離率: {d['bias']}%</span>
+                <span class="metric-tag">量比: {d['vol']}x</span>
+            </div>
+        </div>
+        <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 2; font-size: 1.1em;">
+                <b>💡 戰報分析：</b><br>{d['diag']}
+            </div>
+            <div style="flex: 1; background: rgba(255,255,255,0.4); padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9em;">
+                <b>📊 參考水位：</b><br>
+                預期賣價：<span style="color:#d32f2f; font-weight:bold;">{d['sell']}</span><br>
+                技術支撐：{d['tech_sup']}<br>
+                籌碼地板：{d['chip_floor']}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# 倒數計時與重整
-for i in range(60, 0, -1):
-    timer_placeholder.metric("🔄 刷新倒數", f"{i}s")
-    time.sleep(1)
-
+time.sleep(60)
 st.rerun()
