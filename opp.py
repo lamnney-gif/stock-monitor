@@ -8,158 +8,150 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-# 1. 設置寬螢幕模式 (對應你原本的 1750px 邏輯)
+# 1. 頁面配置：強制寬螢幕模式
 st.set_page_config(page_title="半導體「大戶動向」戰情室", layout="wide")
 
-# 2. 注入你原本的 CSS 樣式 (讓 Streamlit 表格看起來像你的 HTML 版)
+# 2. 注入自定義 CSS (完全還原你的寬螢幕表格風格)
 st.markdown("""
     <style>
-    .reportview-container .main .block-container { max-width: 95%; }
-    th { background-color: #212529 !important; color: white !important; text-align: center !important; font-size: 0.85em !important; }
-    td { text-align: center !important; vertical-align: middle !important; font-size: 0.9em !important; }
-    .diag-cell { text-align: left !important; min-width: 400px; line-height: 1.5; padding: 10px !important; }
-    .badge-buy { background-color: #198754; color: white; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
-    .badge-sell { background-color: #ffc107; color: black; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
-    .timer-text { color: #ff5722; font-weight: bold; font-size: 1.2em; }
-    /* 燈號顏色對應 */
-    .color-alert-orange { background-color: #ffccbc !important; }
-    .table-success { background-color: #d1e7dd !important; }
-    .table-danger { background-color: #f8d7da !important; }
-    .table-info { background-color: #cff4fc !important; }
+    .main .block-container { max-width: 95% !important; padding-top: 2rem; }
+    th { background-color: #212529 !important; color: white !important; text-align: center !important; font-size: 0.85em !important; vertical-align: middle !important; }
+    td { text-align: center !important; vertical-align: middle !important; font-size: 0.9em !important; border: 1px solid #dee2e6 !important; height: 80px; }
+    
+    /* 關鍵價格區塊：買入與停利對齊 */
+    .price-box { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; }
+    .buy-tag { color: #198754; font-weight: bold; font-size: 1.15em; }
+    .sell-tag { color: #d32f2f; font-weight: bold; font-size: 1.15em; border-top: 1px dashed #bbb; padding-top: 4px; width: 80%; }
+    
+    /* 智慧診斷單元格 */
+    .diag-cell { text-align: left !important; min-width: 450px; padding: 12px !important; line-height: 1.5; background-color: #fdfdfd; white-space: normal !important; }
+    
+    /* 倒數計時器樣式 */
+    .timer-text { color: #ff5722; font-weight: bold; font-size: 1.4em; text-align: right; }
+    
+    /* 燈號背景色 */
+    .bg-alert { background-color: #ffccbc !important; } /* 大戶倒貨 */
+    .bg-success { background-color: #d1e7dd !important; } /* 買入訊號 */
+    .bg-danger { background-color: #f8d7da !important; } /* 破位停損 */
+    .bg-info { background-color: #cff4fc !important; } /* 分批停利 */
     </style>
     """, unsafe_allow_html=True)
 
 # 核心追蹤清單
 tickers = {
     "MU": "美光", "INTC": "英特爾", "000660.KS": "海力士", 
-    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創",
-    "2330.TW": "台積電", "NVDA": "輝達"
+    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", 
+    "3481.TW": "群創", "2330.TW": "台積電", "NVDA": "輝達"
 }
 
 def get_volume_support(df):
+    """計算籌碼地板 (120日大戶成交密集區)"""
     try:
         recent_df = df.tail(120)
         v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
-        max_vol_idx = np.argmax(v_hist[0])
-        return (v_hist[1][max_vol_idx] + v_hist[1][max_vol_idx+1]) / 2
+        idx = np.argmax(v_hist[0])
+        return (v_hist[1][idx] + v_hist[1][idx+1]) / 2
     except: return 0
 
-def get_google_news(keyword):
-    news_items = ""
-    try:
-        encoded_key = quote(f"{keyword} 股價 新聞")
-        rss_url = f"https://news.google.com/rss/search?q={encoded_key}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
-        feed = feedparser.parse(rss_url)
-        for entry in feed.entries[:3]:
-            news_items += f"• <a href='{entry.link}' target='_blank'>{entry.title}</a><br>"
-    except: pass
-    return news_items
+# --- 介面頂部 ---
+col_h, col_t = st.columns([3, 1])
+with col_h: 
+    st.title("🚀 半導體「大戶動向」深度戰情室")
+with col_t: 
+    timer_placeholder = st.empty()
 
-# --- 頂部標題與計時器 ---
-col_head, col_timer = st.columns([4, 1])
-with col_head:
-    st.title("🚀 半導體「大戶動向」戰情室")
-with col_timer:
-    timer_place = st.empty()
-
-# --- 數據抓取與處理 ---
+# --- 數據運算核心 ---
 results = []
-news_html = ""
-
-with st.spinner('正在同步數據...'):
+with st.spinner('正在分析全球半導體籌碼防線...'):
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             if df.empty: continue
             
-            close_val = df['Close'].iloc[-1]
+            close = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
             
-            # --- 關鍵價位 ---
-            tech_support = ma20 - (2 * std20)
-            tech_pressure = ma20 + (2 * std20)   # 這就是停利目標
-            chip_floor = get_volume_support(df)
-            suggested_buy = (tech_support + chip_floor) / 2
-            stop_profit_price = df['High'].tail(5).max() * 0.97 # 停利防線
+            # 關鍵位計算
+            tech_press = ma20 + (2 * std20)    # 停利價格 (壓力)
+            tech_sup = ma20 - (2 * std20)      # 技術支撐
+            chip_floor = get_volume_support(df) # 籌碼地板
+            suggested_buy = (tech_sup + chip_floor) / 2 # 建議買入價
+            stop_defense = df['High'].tail(5).max() * 0.97 # 停利防線 (5日高點回測)
             
-            # 技術指標
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
-            y_data = df['Close'].tail(10).values
-            slope_pct = (LinearRegression().fit(np.arange(10).reshape(-1, 1), y_data.reshape(-1, 1)).coef_[0][0] / y_data.mean()) * 100
-            bias = ((close_val - ma20) / ma20) * 100
-            
-            # 籌碼數據
-            info = stock.info
-            f_pe = info.get('forwardPE', "無")
-            inst_pct = info.get('heldPercentInstitutions', 0) * 100
-            insider_pct = info.get('heldPercentInsiders', 0) * 100
+            y_val = df['Close'].tail(10).values
+            slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), y_val.reshape(-1,1)).coef_[0][0] / y_val.mean()) * 100
+            bias = ((close - ma20) / ma20) * 100
 
-            # 智慧燈號邏輯
-            bg_color = ""
-            icon = "🔎"
-            if vol_ratio > 2.0 and abs(slope_pct) < 0.1 and close_val > ma20:
-                bg_color = "color-alert-orange"; icon = "🚨"
-                status = f"🚨 【大戶倒貨】爆量但股價不動。高檔換手訊號，建議減碼。"
-            elif close_val >= tech_pressure * 0.98:
-                bg_color = "table-info"; icon = "⚠️"
-                status = f"⚠️ 【分批停利】逼近停利價 {tech_pressure:.2f}。過熱建議先入袋為安。"
-            elif close_val <= suggested_buy * 1.02:
-                bg_color = "table-success"; icon = "✅"
-                status = f"✅ 【買入訊號】回測支撐區 {suggested_buy:.2f}。適合分批佈局。"
-            elif close_val <= tech_support:
-                bg_color = "table-danger"; icon = "☢️"
-                status = f"☢️ 【停損警示】跌穿支撐 {tech_support:.2f}。趨勢轉空，請保命。"
-            else:
-                status = f"🔎 【正常整理】於支撐 {tech_support:.2f} 與壓力 {tech_pressure:.2f} 之間波動。"
+            # 智慧燈號與背景邏輯
+            cls = ""; icon = "🔎"; diag = f"目前於支撐 {tech_sup:.2f} 與壓力 {tech_press:.2f} 之間穩定波動，量能平穩。"
+            
+            if vol_ratio > 2.0 and abs(slope) < 0.1:
+                cls = "bg-alert"; icon = "🚨"; diag = "🚨 【大戶倒貨】爆量但不漲，高檔籌碼換手跡象明顯，建議分批減碼。"
+            elif close >= tech_press * 0.98:
+                cls = "bg-info"; icon = "⚠️"; diag = f"⚠️ 【分批停利】已達停利目標 {tech_press:.2f}。乖離率 {bias:.1f}%，隨時有回檔風險。"
+            elif close <= suggested_buy * 1.02:
+                cls = "bg-success"; icon = "✅"; diag = f"✅ 【買入訊號】回測支撐區 {suggested_buy:.2f}。大戶成本有守，適合分批佈局。"
+            elif close <= tech_sup:
+                cls = "bg-danger"; icon = "☢️"; diag = f"☢️ 【停損警示】跌破關鍵技術位 {tech_sup:.2f}。趨勢轉空，請務必保命停損。"
 
             results.append({
-                "light": icon, "cls": bg_color, "name": f"{name}({ticker})", "price": f"{close_val:.2f}",
-                "sup": f"{tech_support:.2f}", "buy": f"{suggested_buy:.2f}", "floor": f"{chip_floor:.2f}",
-                "sell": f"{tech_pressure:.2f}", "stop": f"{stop_profit_price:.2f}", "pe": f_pe,
-                "inst": f"{inst_pct:.1f}%", "insider": f"{insider_pct:.1f}%", "vol": f"{vol_ratio:.2f}",
-                "slope": f"{slope_pct:.2f}%", "diag": status
+                "light": icon, "cls": cls, "name": f"{name}({ticker})", "price": f"{close:.2f}",
+                "buy": f"{suggested_buy:.2f}", "sell": f"{tech_press:.2f}", "sup": f"{tech_sup:.2f}",
+                "floor": f"{chip_floor:.2f}", "stop": f"{stop_defense:.2f}", "vol": f"{vol_ratio:.2f}",
+                "slope": f"{slope:.2f}%", "diag": diag, "bias": f"{bias:.1f}%"
             })
-            news_html += f"<b>{name}:</b><br>{get_google_news(name)}<hr>"
         except: pass
 
-# --- 顯示大表格 ---
-df_html = f"""
-<table class="table table-bordered">
+# --- 生成大寬屏 HTML 表格 ---
+html_table = """
+<table class="table">
     <thead>
         <tr>
-            <th>燈號</th><th>股票</th><th>現價</th><th>技術支撐</th>
-            <th><span class="badge-buy">建議買入</span></th><th>籌碼地板</th>
-            <th><span class="badge-sell">停利目標</span></th><th>停利防線</th>
-            <th>本益比</th><th>法人</th><th>大戶</th><th>量比</th><th>斜率</th>
+            <th>燈號</th><th>股票</th><th>目前現價</th>
+            <th>💡 買入 / 停利點</th>
+            <th>技術支撐</th><th>籌碼地板</th><th>停利防線</th>
+            <th>乖離率</th><th>量比</th><th>斜率</th>
             <th>📊 智慧診斷與操作建議</th>
         </tr>
     </thead>
     <tbody>
 """
+
 for r in results:
-    df_html += f"""
+    html_table += f"""
     <tr class="{r['cls']}">
-        <td style="font-size:1.5em;">{r['light']}</td>
-        <td><b>{r['name']}</b></td><td>{r['price']}</td><td>{r['sup']}</td>
-        <td><b>{r['buy']}</b></td><td>{r['floor']}</td>
-        <td><b>{r['sell']}</b></td><td>{r['stop']}</td>
-        <td>{r['pe']}</td><td>{r['inst']}</td><td>{r['insider']}</td>
-        <td>{r['vol']}</td><td>{r['slope']}</td>
-        <td class="diag-cell">{r['diag']}</td>
+        <td style="font-size:1.6em;">{r['light']}</td>
+        <td><b>{r['name']}</b></td>
+        <td style="font-size:1.3em; font-family:monospace;"><b>{r['price']}</b></td>
+        <td>
+            <div class="price-box">
+                <span class="buy-tag">進：{r['buy']}</span>
+                <span class="sell-tag">出：{r['sell']}</span>
+            </div>
+        </td>
+        <td>{r['sup']}</td><td>{r['floor']}</td><td>{r['stop']}</td>
+        <td>{r['bias']}</td><td>{r['vol']}x</td><td>{r['slope']}</td>
+        <td class="diag-cell"><b>{r['diag']}</b></td>
     </tr>
     """
-df_html += "</tbody></table>"
+html_table += "</tbody></table>"
 
-st.markdown(df_html, unsafe_allow_html=True)
+st.markdown(html_table, unsafe_allow_html=True)
 
-# --- 側邊欄新聞 ---
-st.sidebar.title("📰 即時新聞")
-st.sidebar.markdown(news_html, unsafe_allow_html=True)
+# --- 側邊欄：備註與新聞 ---
+st.sidebar.markdown("### 📘 操作備註")
+st.sidebar.info("""
+1. **買入點**：技術下軌與大戶成本的平均值。
+2. **停利點**：技術上軌壓力位，達標建議減碼。
+3. **停利防線**：5日高點回落3%，跌破建議全賣。
+""")
 
-# --- 倒數計時與自動刷新 ---
+# --- 倒數計時與自動重新整理 ---
 for i in range(60, 0, -1):
-    timer_place.markdown(f"<div class='timer-text'>🔄 {i} 秒後自動更新數據</div>", unsafe_allow_html=True)
+    timer_placeholder.markdown(f"<div class='timer-text'>🔄 {i} 秒後自動更新數據</div>", unsafe_allow_html=True)
     time.sleep(1)
+
 st.rerun()
