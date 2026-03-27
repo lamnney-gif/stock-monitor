@@ -8,24 +8,29 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-# 1. 頁面配置 (這行必須在最前面)
-st.set_page_config(page_title="半導體大戶戰情室", layout="wide")
+# 頁面配置
+st.set_page_config(page_title="半導體大戶全數據戰情室", layout="wide")
 
-# 2. 注入自定義 CSS (為了讓燈號有顏色)
+# 強大 CSS 注入：美化卡片與表格
 st.markdown("""
     <style>
-    .🚨 { background-color: #ffccbc; color: #bf360c; padding: 15px; border-radius: 10px; border-left: 10px solid #d84315; margin-bottom: 10px; }
-    .⚠️ { background-color: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 10px; border-left: 10px solid #17a2b8; margin-bottom: 10px; }
-    .✅ { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 10px; border-left: 10px solid #28a745; margin-bottom: 10px; }
-    .☢️ { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 10px; border-left: 10px solid #dc3545; margin-bottom: 10px; }
-    .💤 { background-color: #e2e3e5; color: #383d41; padding: 15px; border-radius: 10px; border-left: 10px solid #6c757d; margin-bottom: 10px; }
-    .🔎 { background-color: #ffffff; color: #212529; padding: 15px; border-radius: 10px; border-left: 10px solid #212529; border: 1px solid #ddd; margin-bottom: 10px; }
+    .reportview-container .main .block-container { max-width: 95%; }
+    .status-card { padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e0e0e0; box-shadow: 2px 2px 8px rgba(0,0,0,0.05); }
+    .🚨 { background-color: #ffebee; border-left: 10px solid #d32f2f; color: #b71c1c; }
+    .⚠️ { background-color: #e1f5fe; border-left: 10px solid #0288d1; color: #01579b; }
+    .✅ { background-color: #e8f5e9; border-left: 10px solid #388e3c; color: #1b5e20; }
+    .☢️ { background-color: #fff3e0; border-left: 10px solid #f57c00; color: #e65100; }
+    .💤 { background-color: #f5f5f5; border-left: 10px solid #9e9e9e; color: #424242; }
+    .🔎 { background-color: #ffffff; border-left: 10px solid #455a64; color: #263238; }
+    .metric-box { display: inline-block; padding: 2px 8px; background: rgba(0,0,0,0.05); border-radius: 4px; margin-right: 10px; font-family: monospace; }
     </style>
     """, unsafe_allow_html=True)
 
+# 核心追蹤清單
 tickers = {
     "MU": "美光", "INTC": "英特爾", "000660.KS": "海力士", 
-    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創"
+    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創",
+    "2330.TW": "台積電", "NVDA": "輝達"
 }
 
 def get_volume_support(df):
@@ -45,25 +50,25 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# 頂部抬頭
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.title("🚀 半導體「大戶動向」雲端戰情室")
-with col2:
-    st.write(f"⏱️ 最後更新：{datetime.now().strftime('%H:%M:%S')}")
-    st.caption("網頁每 60 秒會自動刷新數據")
+# 標題欄
+col_t1, col_t2 = st.columns([3, 1])
+with col_t1:
+    st.title("🚀 半導體「大戶動向」全數據戰情室")
+with col_t2:
+    st.write(f"⏱️ 更新時間：{datetime.now().strftime('%H:%M:%S')}")
+    if st.button("🔄 手動強制刷新"): st.rerun()
 
-# 運算邏輯
 data_list = []
 news_sidebar = {}
 
-with st.spinner('數據計算中...'):
+with st.spinner('正在同步全球籌碼與技術面數據...'):
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             if df.empty: continue
             
+            # --- 價格運算 ---
             close = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
@@ -72,55 +77,77 @@ with st.spinner('數據計算中...'):
             c_floor = get_volume_support(df)
             buy_price = (t_sup + c_floor) / 2
             
-            # 斜率
+            # --- 技術指標 ---
             y = df['Close'].tail(10).values
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), y.reshape(-1,1)).coef_[0][0] / y.mean()) * 100
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
 
-            # 判定燈號
+            # --- 籌碼數據 (從 stock.info 抓取) ---
+            info = stock.info
+            pe = info.get('forwardPE', "N/A")
+            inst_own = info.get('heldPercentInstitutions', 0) * 100
+            insider_own = info.get('heldPercentInsiders', 0) * 100
+
+            # --- 智慧燈號邏輯 ---
             if vol_ratio > 2.0 and abs(slope) < 0.1 and close > ma20:
-                icon, style, status = "🚨", "🚨", "【大戶倒貨】成交量爆出但股價不動，極度危險。"
+                icon, style, status = "🚨", "🚨", f"🚨 【大戶倒貨】爆量 {vol_ratio:.1f} 倍但股價滯漲。疑似高檔出貨，建議大幅減碼。"
             elif close >= t_press * 0.98:
-                icon, style, status = "⚠️", "⚠️", "【分批停利】股價過熱，隨時有回檔風險。"
+                icon, style, status = "⚠️", "⚠️", f"⚠️ 【分批停利】股價觸及壓力位 {t_press:.2f}。短線過熱，建議收割利潤。"
             elif vol_ratio < 0.8 and abs(slope) < 0.05:
-                icon, style, status = "💤", "💤", "【縮量整理】市場觀望，暫無攻擊動能。"
+                icon, style, status = "💤", "💤", "💤 【縮量整理】市場觀望，動能不足，建議保留現金等待方向。"
             elif close <= buy_price * 1.02 and slope > -0.1:
-                icon, style, status = "✅", "✅", "【買入訊號】回測支撐區且趨勢止穩，適合佈局。"
+                icon, style, status = "✅", "✅", f"✅ 【買入訊號】回測黃金買點 {buy_price:.2f}。支撐強勁，適合佈局。"
             elif close <= t_sup:
-                icon, style, status = "☢️", "☢️", "【停損警示】擊穿關鍵支撐，請保護資金安全。"
+                icon, style, status = "☢️", "☢️", f"☢️ 【停損警示】擊穿技術支撐 {t_sup:.2f}。趨勢轉弱，請嚴格執行停損。"
             else:
-                icon, style, status = "🔎", "🔎", "【正常整理】於支撐與壓力之間穩定波動。"
+                icon, style, status = "🔎", "🔎", f"🔎 【正常整理】於區間內波動。斜率 {slope:.2f}%，量能穩定。"
 
             data_list.append({
                 "icon": icon, "style": style, "name": f"{name}({ticker})", "price": round(close, 2),
-                "buy": round(buy_price, 2), "sell": round(t_press, 2),
-                "vol": round(vol_ratio, 2), "slope": f"{slope:.2f}%", "diag": status
+                "buy": round(buy_price, 2), "sell": round(t_press, 2), "floor": round(c_floor, 2),
+                "vol": round(vol_ratio, 2), "slope": f"{slope:.2f}%", "diag": status,
+                "pe": pe, "inst": f"{inst_own:.1f}%", "insider": f"{insider_own:.1f}%"
             })
             news_sidebar[name] = get_google_news(name)
         except: pass
 
-# 顯示結果
+# --- 渲染卡片介面 ---
 for d in data_list:
     st.markdown(f"""
-    <div class="{d['style']}">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 1.2em; font-weight: bold;">{d['icon']} {d['name']} | 現價: {d['price']}</span>
-            <span>量比: {d['vol']} | 斜率: {d['slope']}</span>
+    <div class="status-card {d['style']}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <span style="font-size: 1.5em; font-weight: bold;">{d['icon']} {d['name']}</span>
+                <span style="font-size: 1.8em; margin-left: 15px; font-family: monospace;">{d['price']}</span>
+            </div>
+            <div style="text-align: right;">
+                <span class="metric-box">預測本益比: {d['pe']}</span>
+                <span class="metric-box">機構持股: {d['inst']}</span>
+                <span class="metric-box">內部持股: {d['insider']}</span>
+            </div>
         </div>
-        <div style="margin-top: 10px;">
-            <b>智慧診斷：</b> {d['diag']} | 
-            建議買入: <span style="color:green; font-weight:bold;">{d['buy']}</span> | 
-            建議賣出: <span style="color:red; font-weight:bold;">{d['sell']}</span>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between;">
+            <div style="flex: 2;">
+                <b>智慧診斷：</b> {d['diag']}
+            </div>
+            <div style="flex: 1; text-align: right; font-size: 0.9em;">
+                量比: <b>{d['vol']}</b> | 斜率: <b>{d['slope']}</b><br>
+                建議買入: <span style="color:green; font-weight:bold;">{d['buy']}</span> | 
+                建議賣出: <span style="color:red; font-weight:bold;">{d['sell']}</span>
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 側邊欄新聞
+# 側邊欄新聞與說明
+st.sidebar.title("📘 戰情室說明")
+st.sidebar.info("本系統每 60 秒自動抓取 Yahoo Finance 最新數據。包含 120 日籌碼分佈計算之地板價。")
 for name, news in news_sidebar.items():
     if news:
-        with st.sidebar.expander(f"📰 {name} 新聞"):
+        with st.sidebar.expander(f"📰 {name} 即時新聞"):
             for n in news: st.markdown(n)
 
-# 自動重新整理
+# 自動重新整理邏輯
 time.sleep(60)
 st.rerun()
