@@ -208,23 +208,23 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, ticker, tech_p
     if d['rsi'] > 75: score -= 20
 
 # 🟢 修正後的呼叫方式：參數數量必須精確對齊 (7個)
-            ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {
-                    'trend': trend_label, 
-                    'chip_flow': chip_flow, 
-                    'price': close_val, 
-                    'rsi': rsi_val, 
-                    'pe': pe_val, 
-                    'rev_growth': rev_growth,
-                    'chip_floor': chip_floor   # 👈 這裡之前漏掉了
-                },
-                vix, 
-                sox_status, 
-                "UP" if close_val > df_w['Close'].mean() else "DOWN", 
-                info['name'], # 第 5 個：name
-                ticker,       # 第 6 個：ticker
-                tech_pre      # 第 7 個：tech_press
-            )
+    ai_score, ai_diag, ai_style = calculate_ai_confidence(
+        {
+            'trend': trend_label, 
+            'chip_flow': chip_flow, 
+            'price': close_val, 
+            'rsi': rsi_val, 
+            'pe': pe_val, 
+            'rev_growth': rev_growth,
+            'chip_floor': chip_floor   # 👈 這裡之前漏掉了
+        },
+        vix, 
+        sox_status, 
+        "UP" if close_val > df_w['Close'].mean() else "DOWN", 
+        info['name'], # 第 5 個：name
+        ticker,       # 第 6 個：ticker
+        tech_pre      # 第 7 個：tech_press
+  )
     
     # 確保 if 與上面的 ai_report 對齊（同樣是 4 個空格）
     if score >= 85: 
