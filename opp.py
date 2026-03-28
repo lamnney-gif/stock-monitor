@@ -89,10 +89,27 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# 5. AI 權重診斷腦 (整合實體 AI 思考)
+# --- 5. AI 權重診斷腦 (快取保護實裝) ---
+
+@st.cache_data(ttl=1800) # 👈 重要：記憶 30 分鐘，這期間重新整理「完全不噴額度」
+def get_ai_analysis(name, price, rsi, chip_flow, trend):
+    """獨立的 AI 請求函數，具備快取記憶功能"""
+    if ai_engine:
+        try:
+            # 穩定的呼吸時間，10 檔標的約 20 秒跑完，但因為有快取，一小時只要跑這一次
+            time.sleep(2) 
+            prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
+            res = ai_engine.generate_content(prompt)
+            return res.text
+        except:
+            return "(AI 診斷忙碌中，請稍後重新整理)"
+    return "AI 未啟動"
+
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
     reasons = []
+    
+    # --- 權重邏輯維持不變 ---
     if sox_status == "📈 BULL": score += 20
     else: reasons.append("大盤逆風")
     if vix < 20: score += 20
@@ -103,17 +120,11 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     else: reasons.append("週線偏空")
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20; reasons.append("嚴重過熱")
+
+    # --- 呼叫具備「記憶力」的 AI 診斷 ---
+    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'])
     
-    # 實體 AI 生成
-    ai_report = "AI 診斷目前不可用"
-    if ai_engine:
-        try:
-            time.sleep(6) # 避開 Free Tier 頻率限制
-            prompt = f"你是量化分析師，分析{name}：現價{d['price']}, RSI{d['rsi']:.1f}, 籌碼{d['chip_flow']}, 趨勢{d['trend']}。請給出80字內診斷。"
-            res = ai_engine.generate_content(prompt)
-            ai_report = res.text
-        except: ai_report = "AI 額度受限或連線中斷"
-    
+    # 根據分數回傳結果
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
     elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
