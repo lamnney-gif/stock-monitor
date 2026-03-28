@@ -15,39 +15,38 @@ st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="
 
 # --- 1. 初始化 AI 引擎 (只跑一次) ---
 @st.cache_resource
-def init_all_engines():
-    try:
-        # 設定 Gemini
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        # 設定 Groq
-        groq_c = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        return {"gemini": True, "groq": groq_c}
-    except Exception as e:
-        st.error(f"⚠️ AI 鑰匙設定錯誤: {e}")
-        return None
-
-# 這就是你原本第 51 行的位置，確保它能跑通
-ai_engine = init_all_engines()
-
-# --- [核心] 雙引擎分析函數 ---
 def get_ai_analysis(name, price):
-    if not ai_engine: return "AI 尚未啟動"
-    prompt = f"分析{name}現價{price}，給出50字診斷。"
-    
-    # 1. 嘗試 Gemini
+    """
+    🧪 測試模式：直接使用 Groq (Llama 3.3)
+    """
+    # 1. 檢查 Secrets 鑰匙
+    if "GROQ_API_KEY" not in st.secrets:
+        return "❌ 錯誤：Streamlit Secrets 裡找不到 'GROQ_API_KEY'。"
+
+    prompt = f"你是半導體股票專家。分析{name}現價{price}。請給出50字內技術面診斷與操作建議。"
+
+    # 2. 直接呼叫 Groq
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        return model.generate_content(prompt).text
-    except:
-        # 2. 失敗則嘗試 Groq
-        try:
-            res = ai_engine["groq"].chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return "(備援) " + res.choices[0].message.content
-        except:
-            return "AI 暫時休息中"
+        # 從 Secrets 抓鑰匙
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        
+        # 呼叫 Llama 3.3 模型
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "你是一位精通台美半導體股的專業分析師。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5, # 讓回答穩一點
+            max_tokens=150   # 限制長度
+        )
+        
+        # 回傳結果
+        return "🚀 [Groq 測試中] " + completion.choices[0].message.content
+
+    except Exception as e:
+        # 如果噴錯，直接把錯誤訊息秀出來，方便我們抓蟲
+        return f"❌ Groq 引擎報錯：{str(e)}"
 
 # --- 後面接你的 st.title() 和數據分析邏輯 ---
 st.title("Semiconductor War Room")
