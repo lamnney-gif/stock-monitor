@@ -8,13 +8,13 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-# 1. 頁面配置 (標題改為自用性質)
-st.set_page_config(page_title="Beta Lab - 私人測試區", layout="wide")
+# 1. 頁面配置
+st.set_page_config(page_title="Beta Lab - 數據監測環境", layout="wide")
 
-# 2. 【核心密碼鎖】 - 只有通過驗證才會執行後續代碼
+# 2. 【私人存取驗證】
 def check_password():
     def password_entered():
-        # --- 🔒 請在下方引號內設定你的專屬密碼 ---
+        # --- 🔒 密碼設定處 (預設 8888) ---
         if st.session_state["password"] == "8888": 
             st.session_state["password_correct"] = True
             del st.session_state["password"] 
@@ -22,22 +22,22 @@ def check_password():
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        st.markdown("### 🖥️ 開發者私有實驗環境")
-        st.text_input("請輸入存取密碼以啟動監測：", type="password", on_change=password_entered, key="password")
-        st.info("💡 提醒：本站僅供個人 Python 量化邏輯測試與數據觀測，非公開對外服務。")
+        st.markdown("### 🖥️ 內部開發監測系統")
+        st.text_input("請輸入存取密碼以解鎖數據：", type="password", on_change=password_entered, key="password")
+        st.info("💡 提醒：本環境僅供個人 Python 量化邏輯測試使用，非公開服務。")
         return False
     elif not st.session_state["password_correct"]:
         st.text_input("密碼錯誤，請重新輸入：", type="password", on_change=password_entered, key="password")
-        st.error("😕 驗證失敗，請聯繫開發者取得授權。")
+        st.error("😕 身份驗證失敗。")
         return False
     return True
 
 if not check_password():
-    st.stop() # 驗證未通過，強制切斷後續所有邏輯執行
+    st.stop() 
 
-# --- 以下代碼僅在密碼正確後才會加載 ---
+# --- 以下代碼僅在驗證通過後加載 ---
 
-# 3. CSS 樣式
+# 3. CSS 樣式定義
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -58,44 +58,38 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律防護區 ---
+# --- 側邊欄：法律存證區 ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
     <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
     <b>【免責聲明】</b><br>
-    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
-    2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
-    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    1. 本網頁為個人 <b>Python 量化測試</b>用途。<br><br>
+    2. 內文診斷報告皆為<b>演算法實驗產出</b>，非投資建議。<br><br>
+    3. <b>盈虧自負</b>，開發者不承擔法律責任。<br><br>
+    4. 數據或有延遲，請以官方報價為準。
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 主頁面置頂警告 (確保手機版能看到) ---
+# --- 主頁面置頂警告 (手機版強制顯示) ---
 st.markdown("""
 <div class="mobile-warning">
-    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境 (Beta Lab)</b><br>
+    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
     <p style="font-size: 0.9em; color: #595959; margin-top: 5px; margin-bottom: 0;">
-    本站僅供個人程式邏輯測試，所有數據與診斷均為<b>自動化實驗產出，非投資建議</b>。
-    閱覽者據此操作之<b>盈虧請自行承擔</b>。詳細條款請參閱左側選單。
+    本站僅供個人程式邏輯測試。所有數據均為<b>自動化實驗產出</b>。
+    閱覽者據此操作之<b>盈虧請自行承擔</b>。
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 數據處理邏輯 ---
+# 標的清單
 tickers = {
-    "NVDA": "輝達", 
-    "INTC": "英特爾", 
-    "MU": "美光", 
-    "000660.KS": "海力士", 
-    "2303.TW": "聯電", 
-    "6770.TW": "力積電", 
-    "2344.TW": "華邦電", 
-    "1303.TW": "南亞", 
-    "3481.TW": "群創"
+    "NVDA": "輝達", "TSM": "台積電ADR", "MU": "美光", "000660.KS": "海力士", 
+    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "INTC": "英特爾"
 }
 
+# 成交量密集區計算
 def get_volume_support(df):
     try:
         recent_df = df.tail(60)
@@ -113,13 +107,14 @@ def get_google_news(keyword):
     except: pass
     return news
 
+# 主畫面標題
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 開發者自用測試區")
+with col_t: st.title("🖥️ 半導體量化監測戰術板")
 with col_r: timer_placeholder = st.empty()
 
 data_list, news_dict = [], {}
 
-with st.spinner('同步全球實驗數據中...'):
+with st.spinner('同步全球量價數據中...'):
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
@@ -137,15 +132,19 @@ with st.spinner('同步全球實驗數據中...'):
             local_low_20d = df['Low'].tail(20).min()
             chip_floor = get_volume_support(df)
             
+            # 斜率與乖離
             y_data = df['Close'].tail(10).values
             slope_pct = (LinearRegression().fit(np.arange(10).reshape(-1,1), y_data.reshape(-1,1)).coef_[0][0] / y_data.mean()) * 100
             bias = ((close_val - ma20) / ma20) * 100
+            
+            # --- 成交量比運算 ---
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
             info = stock.info
             pe_val = info.get('forwardPE', "N/A")
             inst_pct = info.get('heldPercentInstitutions', 0) * 100
 
+            # 買點計算
             if slope_pct > 0.6:
                 raw_buy = (ma10 * 0.7) + (tech_support * 0.3)
             else:
@@ -155,19 +154,23 @@ with st.spinner('同步全球實驗數據中...'):
             stop_loss = min(local_low_20d, suggested_buy) * 0.95
             stop_profit_line = df['High'].tail(5).max() * 0.97
 
-            # --- 實驗診斷術語替換 ---
+            # --- 核心診斷：整合「成交量」邏輯 ---
             if bias < -12:
-                icon, style, status = "🟣", "🟣", f"🟣 【統計極值】負乖離率達 {bias:.1f}%。當前數據偏離常態分佈，模擬顯示具備技術性反彈動能。"
+                icon, style, status = "🟣", "🟣", f"🟣 【統計極值】負乖離 {bias:.1f}%。數據顯示嚴重超賣，{'且帶量拋售' if vol_ratio > 1.5 else '縮量尋底中'}，觀測反彈動能。"
             elif close_val < stop_loss:
-                icon, style, status = "☢️", "☢️", f"☢️ 【邏輯觸發】跌破演算底線 {stop_loss:.2f}。趨勢慣性向下，目前非模型觀察區間。"
+                icon, style, status = "☢️", "☢️", f"☢️ 【邏輯觸發】跌破演算底線 {stop_loss:.2f}。{'高量下殺' if vol_ratio > 1.2 else '趨勢轉弱'}，暫不納入模型觀察。"
             elif bias > 20:
-                icon, style, status = "🚨", "🚨", f"🚨 【數據過熱】乖離率 {bias:.1f}%。模型顯示目前為風險溢價區，等待回測觀察位 {suggested_buy:.2f}。"
+                icon, style, status = "🚨", "🚨", f"🚨 【數據過熱】乖離率 {bias:.1f}%。模型顯示風險溢價過高，等待回測至 {suggested_buy:.2f}。"
             elif slope_pct < -0.2 and close_val < tech_support:
-                icon, style, status = "⚠️", "⚠️", f"⚠️ 【參數修正】統計支撐位失效。演算模型觀察點下移至 {suggested_buy:.2f}。"
+                icon, style, status = "⚠️", "⚠️", f"⚠️ 【參數修正】統計支撐位失效。{'放量跌穿' if vol_ratio > 1.3 else '緩步下探'}，觀測點修正至 {suggested_buy:.2f}。"
             elif close_val <= suggested_buy * 1.03 and slope_pct > -0.15:
-                icon, style, status = "✅", "✅", f"✅ 【模型觸發】數據符合回測支撐邏輯，進入演算布局測試位。"
+                # 買點達成，判斷量能是否支持
+                if vol_ratio > 1.2:
+                    icon, style, status = "✅", "✅", f"✅ 【量能觸發】數據進入演算測試位，且成交量 {vol_ratio:.1f}x 放大，邏輯確認強度高。"
+                else:
+                    icon, style, status = "🔎", "🔎", f"🔎 【數據觀測】價格接近模型觀察位，但量能僅 {vol_ratio:.1f}x，動能尚待實驗證實。"
             else:
-                icon, style, status = "🔎", "🔎", f"🔎 【數據觀測】股價於統計支撐與壓力之間運行，暫無明確邏輯觸發。"
+                icon, style, status = "🔎", "🔎", f"🔎 【常規運行】股價於統計區間內震盪，當前成交量比 {vol_ratio:.1f}x，無特殊邏輯觸發。"
 
             data_list.append({
                 "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
@@ -194,7 +197,7 @@ for d in data_list:
             </div>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            斜率: {d['slope']}% | 乖離率: {d['bias']}% | 成交量比: {d['vol']}x
+            斜率: {d['slope']}% | 乖離率: {d['bias']}% | <b>成交量比: {d['vol']}x</b>
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
@@ -228,8 +231,8 @@ for name, news in news_dict.items():
         with st.sidebar.expander(f"{name}"):
             for n in news: st.markdown(n)
 
-# 刷新
+# 刷新計時器
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"🔄 {i}s 後自動重載實驗數據")
+    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新實驗數據")
     time.sleep(1)
 st.rerun()
