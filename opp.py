@@ -209,11 +209,17 @@ with st.spinner('同步數據與 AI 運算中...'):
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
+            # 在迴圈內部呼叫 AI 的地方改寫成：
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
+                {
+                    'trend': trend_label, 
+                    'chip_flow': chip_flow, 
+                    # 🟢 關鍵：把價格取整數，RSI 四捨五入，避免微小跳動觸發新請求
+                    'price': int(close_val), 
+                    'rsi': round(rsi_val, 0) 
+                },
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
-
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
