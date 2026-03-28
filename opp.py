@@ -218,8 +218,7 @@ with col_r: timer_placeholder = st.empty()
 
 tickers = {
     "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
-    "TSM": {"name": "台積電ADR", "adr": None}, "MU": {"name": "美光", "adr": None},
-    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
+    "MU": {"name": "美光", "adr": None}, "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
     "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}, "1303.TW": {"name": "南亞", "adr": None}
 }
 
