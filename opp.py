@@ -33,7 +33,7 @@ def check_password():
 if not check_password():
     st.stop() 
 
-# 3. CSS 樣式定義 (保留你原本的所有配色)
+# 3. CSS 樣式定義
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -47,9 +47,37 @@ st.markdown("""
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    .mobile-warning { background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f; }
+    .mobile-warning { 
+        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
+        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# --- 側邊欄：法律存證區 ---
+st.sidebar.error("⚠️ 【開發者自用測試區】")
+st.sidebar.markdown("""
+<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
+    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
+    <b>【免責聲明】</b><br>
+    1. 本網頁為個人 <b>Python 量化測試</b>用途。<br><br>
+    2. 內文診斷報告皆為<b>演算法實驗產出</b>，非投資建議。<br><br>
+    3. <b>盈虧自負</b>，開發者不承擔法律責任。<br><br>
+    4. 數據或有延遲，請以官方報價為準。
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 主頁面置頂警告 (手機版強制顯示) ---
+st.markdown("""
+<div class="mobile-warning">
+    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
+    <p style="font-size: 0.9em; color: #595959; margin-top: 5px; margin-bottom: 0;">
+    本站僅供個人程式邏輯測試。所有數據均為<b>自動化實驗產出</b>。
+    閱覽者據此操作之<b>盈虧請自行承擔</b>。
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # 4. 指標計算函數 (新增 RSI 與 ATR)
 def calculate_rsi(series, period=14):
