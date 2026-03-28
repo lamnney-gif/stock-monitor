@@ -9,18 +9,22 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 
-# 1. 頁面配置
+# 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# --- AI 核心啟動 (對接你的新 Key) ---
+# --- AI 核心啟動 (自動偵測對接) ---
 @st.cache_resource
 def init_gemini():
     try:
         if "GEMINI_API_KEY" in st.secrets:
             api_key = st.secrets["GEMINI_API_KEY"].strip()
             genai.configure(api_key=api_key)
-            return genai.GenerativeModel('models/gemini-1.5-flash')
-    except: return None
+            # 自動找尋可用模型，優先選 2.5-flash，避開 404 問題
+            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            target = 'models/gemini-2.5-flash' if 'models/gemini-2.5-flash' in available else available[0]
+            return genai.GenerativeModel(target)
+    except Exception as e:
+        return None
     return None
 
 ai_engine = init_gemini()
@@ -34,7 +38,7 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
     if "password_correct" not in st.session_state:
-        st.markdown("### 🖥️ 內部開發監測系統 V6.8 (AI 實裝版)")
+        st.markdown("### 🖥️ 內部開發監測系統 V6.8")
         st.text_input("請輸入存取密碼：", type="password", on_change=password_entered, key="password")
         return False
     elif not st.session_state["password_correct"]:
@@ -44,7 +48,7 @@ def check_password():
 
 if not check_password(): st.stop()
 
-# 3. CSS 樣式定義 (完全保留你的視覺)
+# 3. CSS 樣式定義
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -52,14 +56,16 @@ st.markdown("""
     .⚠️ { background-color: #fffbe6; border-left: 12px solid #ffc53d; color: #874d00; } 
     .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } 
     .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } 
+    .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
+    .mobile-warning { background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. 核心演算函數 (回歸 V6.8)
+# 4. 核心演算函數
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -83,7 +89,7 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# 5. AI 權重診斷腦 (核心實裝)
+# 5. AI 權重診斷腦 (整合實體 AI 思考)
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
     reasons = []
@@ -98,11 +104,12 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20; reasons.append("嚴重過熱")
     
-    # --- 真實 AI 生成診斷 ---
-    ai_report = "AI 診斷暫不可用"
+    # 實體 AI 生成
+    ai_report = "AI 診斷目前不可用"
     if ai_engine:
         try:
-            prompt = f"你是頂級量化分析師，分析{name}：現價{d['price']}, RSI{d['rsi']:.1f}, 籌碼{d['chip_flow']}, 趨勢{d['trend']}。請給出100字內精闢診斷。"
+            time.sleep(2) # 避開 Free Tier 頻率限制
+            prompt = f"你是量化分析師，分析{name}：現價{d['price']}, RSI{d['rsi']:.1f}, 籌碼{d['chip_flow']}, 趨勢{d['trend']}。請給出80字內診斷。"
             res = ai_engine.generate_content(prompt)
             ai_report = res.text
         except: ai_report = "AI 額度受限或連線中斷"
@@ -112,18 +119,19 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
     else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
 
-# 6. 主頁面與數據清單
+# 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 全球量化戰鬥系統 V6.8 - AI 實裝版")
+with col_t: st.title("🖥️ 全球量化戰鬥系統 V6.8 - 全數據 AI 版")
 with col_r: timer_placeholder = st.empty()
 
 tickers = {
-    "2330.TW": {"name": "台積電", "adr": "TSM"}, 
+    "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
+
 }
 
 data_list, news_dict = [], {}
 
-with st.spinner('同步數據中...'):
+with st.spinner('同步數據與 AI 運算中...'):
     vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
     sox = yf.Ticker("^SOX").history(period="1mo")
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
@@ -139,11 +147,23 @@ with st.spinner('同步數據中...'):
             close_val = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
-            rsi_val = (100 - (100 / (1 + (df['Close'].diff().where(df['Close'].diff()>0,0).rolling(14).mean() / df['Close'].diff().abs().rolling(14).mean())))).iloc[-1]
-            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
-            chip_flow = get_institutional_flow(df)
+            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # 指標回歸
+            # RSI & ATR
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
+            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
+            
+            # 趨勢、乖離、籌碼
+            chip_flow = get_institutional_flow(df)
+            ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
+            trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
+            bias = ((close_val - ma20) / ma20) * 100
+            slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
+
+            # 關鍵防線數據
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
@@ -151,7 +171,7 @@ with st.spinner('同步數據中...'):
             dynamic_stop = close_val - (2.5 * atr_val)
 
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': "🌟 多頭排列" if close_val > ma20 else "💀 空頭排列", 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
@@ -159,12 +179,15 @@ with st.spinner('同步數據中...'):
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
                 "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), "chip_flow": chip_flow, "sup": round(tech_sup, 2), "pre": round(tech_pre, 2)
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
+                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
+                "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
+                "chip_flow": chip_flow, "trend": trend_label
             })
             news_dict[info['name']] = get_google_news(info['name'])
         except: pass
 
-# --- UI 渲染 (完全延用 V6.8) ---
+# --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
 for name, news in news_dict.items():
     with st.sidebar.expander(name):
@@ -178,12 +201,15 @@ for d in data_list:
                 <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
                 <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
             </div>
-            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']}</span>
+            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
+        </div>
+        <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
+            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
-            <div style="flex: 2;">
-                <b>🧠 智權診斷 (實裝版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
+            <div style="flex: 2.2;">
+                <b>🧠 智權診斷 (AI 版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
                 <div class="defense-box">
                     ⚙️ <b>風控與成本模擬：</b> 
                     <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
@@ -202,7 +228,7 @@ for d in data_list:
     </div>
     """, unsafe_allow_html=True)
 
-for i in range(60, 0, -1):
+for i in range(3600, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新")
     time.sleep(1)
 st.rerun()
