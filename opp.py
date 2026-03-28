@@ -9,52 +9,42 @@ from urllib.parse import quote
 import time
 
 # 1. 頁面配置
-st.set_page_config(page_title="Beta Lab AI V9.8 - 數據全量體", layout="wide")
+st.set_page_config(page_title="Beta Lab AI V9.9", layout="wide")
 
-# 2. 安全驗證 (密碼 8888)
+# 2. 安全驗證
 if "password_correct" not in st.session_state:
-    st.markdown("### 🖥️ 內部開發監測系統 V9.8")
+    st.markdown("### 🖥️ 內部開發監測系統 V9.9")
     pwd = st.text_input("存取密碼", type="password")
     if pwd == "8888":
         st.session_state["password_correct"] = True
         st.rerun()
     st.stop()
 
-# --- [核心修正] 解決 404 與地區限制的自動切換邏輯 ---
+# --- [核心修正] 絕對啟動邏輯：解決 404 與地區報錯 ---
 @st.cache_resource
 def init_gemini():
-    if "GEMINI_API_KEY" not in st.secrets:
-        return None
-    
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-    
-    # 嘗試多種模型路徑，解決不同地區的 404 問題
-    model_names = ['models/gemini-1.5-flash', 'gemini-1.5-flash', 'models/gemini-pro']
-    for name in model_names:
-        try:
-            m = genai.GenerativeModel(name)
-            # 測試是否真的能跑
-            m.generate_content("test", generation_config={"max_output_tokens": 1})
-            return m
-        except:
-            continue
-    return None
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"].strip()
+        genai.configure(api_key=api_key)
+        # 嘗試使用最穩定的模型名稱
+        return genai.GenerativeModel('models/gemini-1.5-flash')
+    except Exception as e:
+        return f"AI 初始化失敗: {e}"
 
-model = init_gemini()
+model_engine = init_gemini()
 
-# 3. CSS 戰鬥樣式 (確保數據權限視覺回歸)
+# 3. CSS 戰鬥樣式
 st.markdown("""
     <style>
-    .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #ddd; background: white; }
-    .ai-diag-box { background: #f0f5ff; border-left: 6px solid #1890ff; padding: 18px; border-radius: 10px; margin: 15px 0; color: #002766; }
+    .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #ddd; background: white; box-shadow: 2px 4px 12px rgba(0,0,0,0.08); }
+    .ai-diag-box { background: #f0f5ff; border-left: 6px solid #1890ff; padding: 18px; border-radius: 10px; margin: 15px 0; color: #002766; font-size: 1.05em; }
     .metric-tag { display: inline-block; padding: 4px 12px; background: #f5f5f5; border-radius: 6px; margin-right: 8px; font-weight: bold; }
     .defense-box { background: #fcfcfc; border: 1.5px dashed #595959; padding: 15px; border-radius: 10px; margin-top: 15px; }
     .price-value { font-family: monospace; font-weight: bold; color: #d4380d; font-size: 1.1em; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. 數據演算函數 (數據權全數歸位)
+# 4. 數據演算（確保所有權限回歸）
 def get_institutional_flow(df):
     recent = df.tail(5)
     score = 0
@@ -69,23 +59,11 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-def get_google_news(name):
-    try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(name + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        return [e.title for e in feed.entries[:3]]
-    except: return []
+# 5. 主分析迴圈
+tickers = {"2330.TW": "台積電", "NVDA": "輝達", "TSM": "台積電ADR", "MU": "美光", "2303.TW": "聯電", "2344.TW": "華邦電"}
 
-# 5. 監控清單
-tickers = {"2330.TW": "台積電", "NVDA": "輝達", "TSM": "台積電ADR", "MU": "美光", "2303.TW": "聯電"}
-
-# 大盤數據
-try:
-    sox = yf.Ticker("^SOX").history(period="1mo")
-    sox_trend = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
-except: sox_trend = "無法取得"
-
-st.title("🖥️ 全球量化戰鬥系統 V9.8 — AI 診斷版")
-timer = st.empty()
+st.title("🖥️ 全球量化戰鬥系統 V9.9")
+timer_placeholder = st.empty()
 
 for ticker, name in tickers.items():
     try:
@@ -93,32 +71,33 @@ for ticker, name in tickers.items():
         df = stock.history(period="1y")
         if df.empty: continue
         
-        # 核心數據計算
+        # --- 數據計算開始 ---
         close = df['Close'].iloc[-1]
         ma20 = df['Close'].rolling(20).mean().iloc[-1]
         std20 = df['Close'].rolling(20).std().iloc[-1]
         rsi = (df['Close'].diff().where(df['Close'].diff()>0,0).rolling(14).mean() / df['Close'].diff().abs().rolling(14).mean()*100).iloc[-1]
         
-        # 你的專屬指標全部弄回來了
         chip = get_institutional_flow(df)
-        swing_high = df['High'].tail(5).max() * 0.97 
-        atr = 2.5 * (df['High'] - df['Low']).rolling(14).mean().iloc[-1]
-        defense_line = close - atr
+        swing_high = df['High'].tail(5).max() * 0.97
+        defense_line = close - (2.5 * (df['High']-df['Low']).rolling(14).mean().iloc[-1])
         vol_support = get_volume_support(df)
         obs_point = ma20 - 1.2 * std20
         pressure = ma20 + 2 * std20
-        
-        # AI 診斷
-        if model:
-            with st.spinner(f'AI 分析 {name}...'):
-                try:
-                    p = f"分析{name}({ticker}): 現價{close}, RSI{rsi:.1f}, 籌碼{chip}, 支撐{vol_support:.2f}。給100字內精準診斷。"
-                    ai_diag = model.generate_content(p).text
-                except: ai_diag = "⚠️ 該模型在當前地區受限，請檢查 Secrets 設定。"
-        else:
-            ai_diag = "❌ API Key 讀取失敗或模型無法啟動，請重新 Reboot App。"
+        # ------------------
 
-        # UI 渲染
+        # AI 診斷邏輯
+        ai_diag = "AI 診斷啟動中..."
+        if isinstance(model_engine, str):
+            ai_diag = model_engine
+        else:
+            try:
+                with st.spinner(f'AI 診斷 {name}...'):
+                    prompt = f"分析{name}({ticker})：現價{close:.2f}, RSI{rsi:.1f}, 籌碼{chip}。請給100字診斷。"
+                    ai_diag = model_engine.generate_content(prompt).text
+            except Exception as e:
+                ai_diag = f"⚠️ 地區連線受限或 API 異常: {str(e)}"
+
+        # 渲染 UI
         st.markdown(f"""
         <div class="status-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -132,13 +111,13 @@ for ticker, name in tickers.items():
             <div style="display: flex; gap: 20px;">
                 <div style="flex: 2;">
                     <div class="defense-box">
-                        🛡️ <b>風控指標：</b><br>
+                        🛡️ <b>關鍵防禦指標：</b><br>
                         波段高點預警: <span class="price-value">{swing_high:.2f}</span> | 
                         ATR 底線(停損): <span class="price-value">{defense_line:.2f}</span> <br>
                         密集換手區(支撐): <span class="price-value">{vol_support:.2f}</span>
                     </div>
                 </div>
-                <div style="flex: 1; background: #fffbe6; padding: 12px; border-radius: 10px;">
+                <div style="flex: 1; background: #fffbe6; padding: 15px; border-radius: 10px; border: 1px solid #ffe58f;">
                     <b>🧪 量化點位：</b><br>
                     🟢 觀察點: <span style="color:green; font-weight:bold;">{obs_point:.2f}</span><br>
                     🎯 壓力位: <span style="color:red; font-weight:bold;">{pressure:.2f}</span>
@@ -148,5 +127,6 @@ for ticker, name in tickers.items():
         """, unsafe_allow_html=True)
     except: pass
 
+# 刷新
 time.sleep(60)
 st.rerun()
