@@ -230,5 +230,5 @@ for d in data_list:
 
 for i in range(3600, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新")
-    time.sleep(2)
+    time.sleep(1)
 st.rerun()
