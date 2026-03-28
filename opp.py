@@ -178,22 +178,22 @@ for d in data_list:
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.2;">
-                <b>💡 戰術診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
+                <b>💡 演算執行狀態：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
                 <div class="defense-box">
-                    🛡️ <b>防禦體系：</b> 
-                    <span style="color:#1890ff;">短期停利參考: {d['stop_line']}</span> | 
-                    <span style="color:#cf1322; font-weight:bold;">絕對停損: {d['stop_loss']}</span> <br>
-                    歷史籌碼地板: {d['chip_floor']} | 布林支撐底線: {d['tech_sup']}
+                    🛡️ <b>風控參數模擬：</b> 
+                    <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
+                    <span style="color:#cf1322; font-weight:bold;">演算底線: {d['stop_loss']}</span> <br>
+                    密集換手區間: {d['chip_floor']} | 統計偏離下軌: {d['tech_sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
                 <b>📊 核心參考價位：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div><span class="price-label">🟢 建議買入</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
-                    <div><span class="price-label">🎯 預期停利</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
+                    <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
                     <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
-                    <div><span class="price-label">📉 波段支撐</span><br><span class="price-value">{d['tech_sup']}</span></div>
-                    <div><span class="price-label">📈 波段壓力</span><br><span class="price-value">{d['tech_pre']}</span></div>
+                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['tech_sup']}</span></div>
+                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['tech_pre']}</span></div>
                 </div>
             </div>
         </div>
