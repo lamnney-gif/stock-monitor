@@ -148,7 +148,7 @@ def get_google_news(keyword):
 # 🟢 修正點：增加 pe 和 rev 參數接收
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
     # 這裡的 Prompt 已經正確引用了 pe 和 rev
-    prompt = f"你是量化分析師，分析{name}：現價{price}, 本益比{pe}, 營收年增{rev}%, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}，加入新聞和消息。請給出80字內精闢診斷和未來動向。"
+   prompt = f"""你是資深半導體分析師。分析{name}({ticker})：1. 數據：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。2. 關鍵位：支撐{chip_floor}, 壓力{tech_press}。3. 外部環境：VIX{vix:.1f}, 費半{sox_status}。請結合最新新聞，給出80字內精闢診斷、具體支撐/壓力建議及未來一週動向。"""
     
     if ai_engines["groq"]:
         try:
