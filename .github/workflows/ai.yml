@@ -2,26 +2,35 @@ name: Auto_AI_Analysis
 
 on:
   schedule:
-    - cron: '0 1 * * 1-5'  # 台北時間 09:00 自動執行
-    - cron: '30 5 * * 1-5' # 台北時間 13:30 收盤跑
-  workflow_dispatch:      # 讓你可以手動點擊按鈕執行
+    - cron: '0 1 * * 1-5'  # 台北時間 09:00
+    - cron: '30 5 * * 1-5' # 台北時間 13:30
+  workflow_dispatch:      
 
 permissions:
-  contents: write         # 允許機器人把分析結果寫回你的專案
+  contents: write         
 
 jobs:
   run_ai:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: 1. 檢出代碼 (已更新至 v4)
+        uses: actions/checkout@v4  # 👈 改成 v4 就不會噴警告了
+
+      - name: 2. 設定 Python (已更新至 v5)
+        uses: actions/setup-python@v5 # 👈 改成 v5 支援 Node.js 24
         with:
-          python-version: '3.9'
-      - run: pip install yfinance google-generativeai pandas
-      - env:
+          python-version: '3.10'
+
+      - name: 3. 安裝套件
+        run: pip install yfinance google-generativeai pandas
+
+      - name: 4. 執行分析
+        env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # 👈 順便加入這個環境變數，跑得更順
         run: python ai_hunter.py
-      - name: 存檔回 GitHub
+
+      - name: 5. 存檔回 GitHub
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
