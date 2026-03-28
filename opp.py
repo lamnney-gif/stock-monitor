@@ -6,10 +6,28 @@ import feedparser
 from datetime import datetime
 from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
+import google.generativeai as genai
 import time
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
+
+# --- AI 核心啟動 (自動偵測對接) ---
+@st.cache_resource
+def init_gemini():
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            api_key = st.secrets["GEMINI_API_KEY"].strip()
+            genai.configure(api_key=api_key)
+            # 自動找尋可用模型，優先選 2.5-flash，避開 404 問題
+            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            target = 'models/gemini-2.5-flash' if 'models/gemini-2.5-flash' in available else available[0]
+            return genai.GenerativeModel(target)
+    except Exception as e:
+        return None
+    return None
+
+ai_engine = init_gemini()
 
 # 2. 私人存取驗證
 def check_password():
@@ -39,42 +57,15 @@ st.markdown("""
     .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } 
     .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } 
     .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
-    .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } 
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    .mobile-warning { 
-        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
-        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
-    }
+    .mobile-warning { background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律存證區 ---
-st.sidebar.error("⚠️ 【開發者自用測試區】")
-st.sidebar.markdown("""
-<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
-    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
-<b>【免責聲明】</b><br>
-    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
-    2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
-    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# --- 主頁面置頂警告 (手機版強制顯示) ---
-st.markdown("""
-<div class="mobile-warning">
-<b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
-    本站僅供 Python 程式邏輯測試（Beta Lab），內文建議與價格均為演算法實驗產出。
-    <b>閱覽者據此操作之盈虧請自行承擔</b>。
-    </p>
-</div>
-""", unsafe_allow_html=True)
-# 4. 核心演算函數 (補回所有精密運算)
+# 4. 核心演算函數
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -98,11 +89,11 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# 5. AI 權重診斷腦 (核心加權)
-def calculate_ai_confidence(d, vix, sox_status, week_trend):
+# 5. AI 權重診斷腦 (整合實體 AI 思考)
+def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
     reasons = []
-    if sox_status == "BULL": score += 20
+    if sox_status == "📈 BULL": score += 20
     else: reasons.append("大盤逆風")
     if vix < 20: score += 20
     elif vix > 28: score -= 30; reasons.append("極度恐慌")
@@ -111,50 +102,50 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend):
     if week_trend == "UP": score += 15
     else: reasons.append("週線偏空")
     if d['chip_flow'] == "🔥 強勢買入": score += 15
-    if d['adr'] != "N/A" and float(d['adr'].strip('%')) > 0.5: score += 5
-    if d['price'] <= d['buy'] * 1.05: score += 10
     if d['rsi'] > 75: score -= 20; reasons.append("嚴重過熱")
     
-    if score >= 85: return score, "✅ 【強力進攻】多因子全線共振，確信度極高。", "✅"
-    elif score >= 65: return score, f"🔎 【分批佈局】趨勢成形，觀察量能。阻礙：{'/'.join(reasons) if reasons else '無'}", "✅"
-    elif score >= 45: return score, f"⚠️ 【觀望等待】多空拉鋸。風險：{'/'.join(reasons)}", "⚠️"
-    else: return score, f"☢️ 【全面避險】風險值過高。主要威脅：{'/'.join(reasons)}", "☢️"
+    # 實體 AI 生成
+    ai_report = "AI 診斷目前不可用"
+    if ai_engine:
+        try:
+            time.sleep(1) # 避開 Free Tier 頻率限制
+            prompt = f"你是量化分析師，分析{name}：現價{d['price']}, RSI{d['rsi']:.1f}, 籌碼{d['chip_flow']}, 趨勢{d['trend']}。請給出80字內診斷。"
+            res = ai_engine.generate_content(prompt)
+            ai_report = res.text
+        except: ai_report = "AI 額度受限或連線中斷"
+    
+    if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
+    elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
+    elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
+    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
 
-# 6. 主標題
+# 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
 with col_t: st.title("🖥️ 全球量化戰鬥系統 V6.8 - 全數據 AI 版")
 with col_r: timer_placeholder = st.empty()
 
-# 標的清單
 tickers = {
-    "2330.TW": {"name": "台積電", "adr": "TSM"},
-    "NVDA": {"name": "輝達", "adr": None},
-    "TSM": {"name": "台積電ADR", "adr": None},
-    "MU": {"name": "美光", "adr": None},
-    "2303.TW": {"name": "聯電", "adr": "UMC"},
-    "6770.TW": {"name": "力積電", "adr": None},
-    "2344.TW": {"name": "華邦電", "adr": None},
-    "3481.TW": {"name": "群創", "adr": None},
-    "1303.TW": {"name": "南亞", "adr": None}
+    "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
+    "TSM": {"name": "台積電ADR", "adr": None}, "MU": {"name": "美光", "adr": None},
+    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
+    "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}
 }
 
 data_list, news_dict = [], {}
 
-with st.spinner('正在同步全球數據、籌碼、均線與 AI 評分中...'):
+with st.spinner('同步數據與 AI 運算中...'):
     vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
-    us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
     sox = yf.Ticker("^SOX").history(period="1mo")
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
+    us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
 
     for ticker, info in tickers.items():
         try:
-            name = info['name']
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
             
-            # --- 數據運算 ---
             close_val = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
@@ -167,51 +158,42 @@ with st.spinner('正在同步全球數據、籌碼、均線與 AI 評分中...')
             rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
             atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
             
-            # 趨勢與籌碼
+            # 趨勢、乖離、籌碼
             chip_flow = get_institutional_flow(df)
             ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
             trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
             bias = ((close_val - ma20) / ma20) * 100
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # 補回：波段高點、換手區、支撐壓力
+            # 關鍵防線數據
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
-            suggested_buy = min(ma20 - 1.2 * std20, df['Low'].tail(3).min() * 0.99)
+            suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
-            # ADR 與 AI 評分
-            adr_diff = "N/A"
-            if info['adr']:
-                adr_data = yf.Ticker(info['adr']).history(period="5d")
-                adr_chg = ((adr_data['Close'].iloc[-1] - adr_data['Close'].iloc[-2]) / adr_data['Close'].iloc[-2]) * 100
-                adr_diff = f"{adr_chg:+.1f}%"
-
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'buy': suggested_buy, 'rsi': rsi_val, 'adr': adr_diff},
-                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN"
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
+                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
             data_list.append({
-                "icon": ai_style, "style": ai_style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
-                "ai_score": ai_score, "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
+                "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
+                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
                 "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "adr": adr_diff, "slope": round(slope, 2),
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
-                "pe": stock.info.get('forwardPE', "N/A"), "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
+                "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
                 "chip_flow": chip_flow, "trend": trend_label
             })
-            news_dict[name] = get_google_news(name)
+            news_dict[info['name']] = get_google_news(info['name'])
         except: pass
 
 # --- UI 渲染 ---
-st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f} ({'😱' if vix > 22 else '😊'})\n- 10Y Yield: {us10y:.2f}%\n- **SOX 趨勢: {sox_status}**")
-st.sidebar.title("📰 即時情報")
+st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
 for name, news in news_dict.items():
-    if news:
-        with st.sidebar.expander(name):
-            for n in news: st.markdown(n)
+    with st.sidebar.expander(name):
+        for n in news: st.markdown(n)
 
 for d in data_list:
     st.markdown(f"""
@@ -221,37 +203,27 @@ for d in data_list:
                 <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
                 <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
             </div>
-            <div style="text-align: right;">
-                <div style="margin-top:8px;">
-                    <span class="metric-tag">ADR: {d['adr']}</span>
-                    <span class="metric-tag">籌碼: {d['chip_flow']}</span>
-                    <span class="metric-tag">PE: {d['pe']}</span>
-                    <span class="metric-tag">RSI: {d['rsi']}</span>
-                </div>
-            </div>
+            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | <b>成交量比: {d['vol']}x</b> | 機構: {d['inst']}
+            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.2;">
-                <b>🧠 智權診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
+                <b>🧠 智權診斷 (AI 版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
                 <div class="defense-box">
                     ⚙️ <b>風控與成本模擬：</b> 
                     <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
-                    <span style="color:#cf1322; font-weight:bold;">ATR 演算底線: {d['stop']}</span> <br>
-                    <b>密集換手區間: {d['chip_floor']}</b> | 統計支撐下軌: {d['sup']}
+                    <span style="color:#cf1322; font-weight:bold;">ATR 底線: {d['stop']}</span> <br>
+                    <b>密集換手區間: {d['chip_floor']}</b> | 統計支撐: {d['sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
                 <b>🧪 邏輯回測參數：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
-                    <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
-                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
-                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
-                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div>
+                    <div><span class="price-label">🟢 觀察點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
                 </div>
             </div>
         </div>
