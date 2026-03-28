@@ -4,3 +4,4 @@ pandas
 numpy
 feedparser
 scikit-learn
+google-generativeai
