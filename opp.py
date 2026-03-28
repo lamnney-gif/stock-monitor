@@ -147,13 +147,7 @@ def get_google_news(keyword):
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, ticker, price, rsi, chip_flow, trend, chip_floor, tech_press, vix, sox_status, pe, rev):
     # 這是你剛才寫的專業版 Prompt
-    prompt = f"""你是資深半導體分析師。分析{name}({ticker})：
-1. 數據：現價{price}, 本益比{pe}, 營收年增{rev}%, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。
-2. 關鍵位：支撐{chip_floor}, 壓力{tech_press}。
-3. 外部環境：VIX{vix:.1f}, 費半{sox_status}。
-請結合最新新聞，給出80字內精闢診斷、具體支撐/壓力建議及未來一週動向。"""
-
-    # ... 後面接 Groq 或 Gemini 的呼叫邏輯 (記得縮排要對！) ...
+    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
     
     if ai_engines["groq"]:
         try:
