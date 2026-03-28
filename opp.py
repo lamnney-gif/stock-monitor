@@ -19,7 +19,8 @@ def init_gemini():
         if "GEMINI_API_KEY" in st.secrets:
             api_key = st.secrets["GEMINI_API_KEY"].strip()
             genai.configure(api_key=api_key)
-            return genai.GenerativeModel('models/gemini-1.5-flash')
+            # 改成你剛才測試成功的 2.5 版本
+            return genai.GenerativeModel('gemini-2.5-flash') 
     except: return None
     return None
 
