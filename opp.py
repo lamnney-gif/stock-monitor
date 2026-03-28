@@ -118,9 +118,7 @@ with col_t: st.title("🖥️ 全球量化戰鬥系統 V6.8 - AI 實裝版")
 with col_r: timer_placeholder = st.empty()
 
 tickers = {
-    "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
-    "TSM": {"name": "台積電ADR", "adr": None}, "MU": {"name": "美光", "adr": None},
-    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None}
+    "2330.TW": {"name": "台積電", "adr": "TSM"}, 
 }
 
 data_list, news_dict = [], {}
