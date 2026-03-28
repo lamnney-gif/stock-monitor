@@ -180,14 +180,14 @@ for d in data_list:
             <div style="flex: 2.2;">
                 <b>💡 演算執行狀態：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
                 <div class="defense-box">
-                    🛡️ <b>風控參數模擬：</b> 
+                    ⚙️ <b>風控參數模擬：</b> 
                     <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
                     <span style="color:#cf1322; font-weight:bold;">演算底線: {d['stop_loss']}</span> <br>
                     密集換手區間: {d['chip_floor']} | 統計偏離下軌: {d['tech_sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
-                <b>📊 核心參考價位：</b><br>
+                <b>🧪 核心參考價位：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
