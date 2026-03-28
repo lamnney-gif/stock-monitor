@@ -14,31 +14,31 @@ from groq import Groq
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
 # --- AI 核心啟動 (雙引擎自動偵測) ---
+# --- 1. 先定義函數 (正確的 def 位置) ---
 @st.cache_resource
-def get_ai_analysis(name, price, rsi, chip_flow, trend):
-    # 這就是剛才在你電腦測試成功的邏輯
+def init_ai_engines():
+    engines = {"gemini": None, "groq": None}
+    # ... 裡面是你初始化 Gemini 和 Groq 的邏輯 ...
     try:
-        # 直接從 Secrets 拿 Key
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        
-        prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出50字內診斷。"
-        
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.5
-        )
-        
-        return "🚀 " + completion.choices[0].message.content
-        
-    except Exception as e:
-        # 如果雲端報錯，會把原因秀在網頁上，我們才好抓蟲
-        return f"❌ Groq 診斷失敗：{str(e)[:50]}"
+        if "GROQ_API_KEY" in st.secrets:
+            engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    except:
+        pass
+    return engines
 
-# 執行初始化
-ai_engines = init_ai_engines()
-# --- 後面接你的 st.title() 和數據分析邏輯 ---
-st.title("Semiconductor War Room")
+# --- 2. 再呼叫函數 (這行必須在 def 之後) ---
+ai_engines = init_ai_engines() # 👈 這就是你的第 39 行，確保它在下面
+
+# --- 3. 定義診斷函數 ---
+def get_ai_analysis(name, price, rsi, chip_flow, trend):
+    # 這裡面使用 ai_engines["groq"] 來跑剛才測試成功的邏輯
+    try:
+        client = ai_engines["groq"]
+        if client:
+            # ... 你的測試成功代碼 ...
+            return "🚀 分析結果..."
+    except Exception as e:
+        return f"❌ 診斷失敗: {e}"
 
 # 2. 私人存取驗證
 def check_password():
