@@ -9,15 +9,19 @@ on:
 permissions:
   contents: write         
 
+# 🟢 這裡加入環境變數，強制所有插件使用最新的 Node.js 24
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   run_ai:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 檢出代碼 (已更新至 v4)
-        uses: actions/checkout@v4  # 👈 改成 v4 就不會噴警告了
+      - name: 1. 檢出代碼
+        uses: actions/checkout@v4
 
-      - name: 2. 設定 Python (已更新至 v5)
-        uses: actions/setup-python@v5 # 👈 改成 v5 支援 Node.js 24
+      - name: 2. 設定 Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -27,7 +31,7 @@ jobs:
       - name: 4. 執行分析
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # 👈 順便加入這個環境變數，跑得更順
+        # 這裡記得確認你的 model 是寫 gemini-2.5-flash
         run: python ai_hunter.py
 
       - name: 5. 存檔回 GitHub
@@ -35,5 +39,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add ai_report.json
-          git commit -m "🤖 自動更新 AI 診斷" || exit 0
+          git commit -m "🤖 自動更新 AI 診斷 (Node.js 24)" || exit 0
           git push
