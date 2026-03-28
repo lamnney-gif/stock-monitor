@@ -234,6 +234,7 @@ with st.spinner('同步數據與 AI 運算中...'):
     for ticker, info in tickers.items():
         try:
             stock = yf.Ticker(ticker)
+            s_info = stock.info
             pe_val = s_info.get('trailingPE', 0) # 抓不到就給 0
             rev_growth = s_info.get('revenueGrowth', 0) * 100 # 轉為百分比
             
@@ -268,7 +269,10 @@ with st.spinner('同步數據與 AI 運算中...'):
             dynamic_stop = close_val - (2.5 * atr_val)
 
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_val, 'rev_growth': rev_growth},
+                {
+                    'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 
+                    'rsi': rsi_val, 'pe': pe_val, 'rev_growth': rev_growth
+                },
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
