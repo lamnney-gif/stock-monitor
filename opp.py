@@ -37,29 +37,22 @@ ai_engines = init_ai_engines()
 
 # 2. 私人存取驗證
 def check_password():
-    # 如果已經驗證成功了，直接過
-    if st.session_state.get("password_correct", False):
-        return True
-
-    # 顯示登入介面
-    st.markdown("### 🖥️ 內部開發監測系統 V6.8")
-    
-    # 使用 .get() 來安全讀取，避免 KeyError
-    pwd = st.text_input("請輸入存取密碼：", type="password", key="password_input")
-    
-    if pwd: # 如果使用者有輸入東西
-        if pwd == "8888":
+    def password_entered():
+        if st.session_state["password"] == "8888": 
             st.session_state["password_correct"] = True
-            st.rerun() # 驗證成功立即重整
+            del st.session_state["password"] 
         else:
-            st.error("😕 驗證失敗")
-            return False
-            
-    return False
+            st.session_state["password_correct"] = False
+    if "password_correct" not in st.session_state:
+        st.markdown("### 🖥️ 內部開發監測系統 V6.8")
+        st.text_input("請輸入存取密碼：", type="password", on_change=password_entered, key="password")
+        return False
+    elif not st.session_state["password_correct"]:
+        st.error("😕 驗證失敗")
+        return False
+    return True
 
-# 呼叫檢查
-if not check_password():
-    st.stop()
+if not check_password(): st.stop()
 
 # 3. CSS 樣式
 st.markdown("""
@@ -126,34 +119,18 @@ def get_volume_support(df):
 def get_google_news(keyword):
     news = []
     try:
-        # 擴張關鍵字：增加「展望、營收、半導體」等標籤，讓內容更豐富
-        search_query = quote(f"{keyword} (股價 OR 營收 OR 財報 OR 半導體)")
-        url = f"https://news.google.com/rss/search?q={search_query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
-        
-        feed = feedparser.parse(url)
-        # 增加抓取數量到 10 條
-        for entry in feed.entries[:10]:
-            # 格式化日期，只顯示月/日
-            date_str = ""
-            if hasattr(entry, 'published'):
-                date_str = f"[{entry.published[5:10]}] "
-            news.append(f"{date_str}[{entry.title}]({entry.link})")
-    except:
-        pass
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400)
-def get_ai_analysis(name, ticker, price, rsi, chip_flow, trend, chip_floor, tech_press, vix, sox_status, pe, rev):
-    # 1. 構建專業版 Prompt (確保這行前面有 4 個空格)
-    prompt = f"""你是資深半導體分析師。分析{name}({ticker})：
-1. 數據：現價{price}, 本益比{pe}, 營收年增{rev}%, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。
-2. 關鍵位：支撐{chip_floor}, 壓力{tech_press}。
-3. 外部環境：VIX{vix:.1f}, 費半{sox_status}。
-請結合最新新聞，給出80字內精闢診斷、具體支撐/壓力建議及未來一週動向。"""
-
-    # 2. 呼叫 AI 引擎 (確保 if 與 prompt 對齊)
+@st.cache_data(ttl=14400) # AI 診斷12小時更新一次
+def get_ai_analysis(name, price, rsi, chip_flow, trend):
+    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
+    
+    # 優先嘗試 Groq (因為剛才測試最穩)
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
@@ -161,18 +138,20 @@ def get_ai_analysis(name, ticker, price, rsi, chip_flow, trend, chip_floor, tech
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200
             )
-            return completion.choices[0].message.content
-        except Exception as e:
-            pass # 如果 Groq 失敗，嘗試下一個
+            return " (Groq 備援) " + completion.choices[0].message.content
+        except:
+            pass
             
+    # 備援嘗試 Gemini
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
             return res.text
-        except Exception as e:
-            return f"⚠️ AI 引擎暫時忙碌中 ({str(e)[:20]})"
+        except:
+            return "⚠️ AI 引擎暫時忙碌中"
             
     return "❌ AI 未啟動 (請檢查 Secrets)"
+
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -196,7 +175,7 @@ def get_google_news(keyword):
     except: pass
     return news
 
-def calculate_ai_confidence(d, vix, sox_status, week_trend, name, ticker, tech_press):
+def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
@@ -207,34 +186,13 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, ticker, tech_p
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-# 🟢 修正後的呼叫方式：參數數量必須精確對齊 (7個)
-    ai_score, ai_diag, ai_style = calculate_ai_confidence(
-        {
-            'trend': trend_label, 
-            'chip_flow': chip_flow, 
-            'price': close_val, 
-            'rsi': rsi_val, 
-            'pe': pe_val, 
-            'rev_growth': rev_growth,
-            'chip_floor': chip_floor   # 👈 這裡之前漏掉了
-        },
-        vix, 
-        sox_status, 
-        "UP" if close_val > df_w['Close'].mean() else "DOWN", 
-        info['name'], # 第 5 個：name
-        ticker,       # 第 6 個：ticker
-        tech_pre      # 第 7 個：tech_press
-  )
+    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'])
     
-    # 確保 if 與上面的 ai_report 對齊（同樣是 4 個空格）
-    if score >= 85: 
-        return score, f"✅ 【強力進攻】{ai_report}", "✅"
-    elif score >= 65: 
-        return score, f"🔎 【分批佈局】{ai_report}", "✅"
-    elif score >= 45: 
-        return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
-    else: 
-        return score, f"☢️ 【全面避險】{ai_report}", "☢️"
+    if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
+    elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
+    elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
+    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
+
 # 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
 with col_t: st.title("🖥️ 測試 全數據 AI 版")
@@ -242,7 +200,8 @@ with col_r: timer_placeholder = st.empty()
 
 tickers = {
     "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
-    "MU": {"name": "美光", "adr": None}, "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
+    "TSM": {"name": "台積電ADR", "adr": None}, "MU": {"name": "美光", "adr": None},
+    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
     "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}, "1303.TW": {"name": "南亞", "adr": None}
 }
 
@@ -257,10 +216,6 @@ with st.spinner('同步數據與 AI 運算中...'):
     for ticker, info in tickers.items():
         try:
             stock = yf.Ticker(ticker)
-            s_info = stock.info
-            pe_val = s_info.get('trailingPE', 0) # 抓不到就給 0
-            rev_growth = s_info.get('revenueGrowth', 0) * 100 # 轉為百分比
-            
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
@@ -292,45 +247,19 @@ with st.spinner('同步數據與 AI 運算中...'):
             dynamic_stop = close_val - (2.5 * atr_val)
 
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {
-                    'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 
-                    'rsi': rsi_val, 'pe': pe_val, 'rev_growth': rev_growth
-                },
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
-# --- 在 data_list.append 之前，確保我們先從 stock.info 抓到這兩項 ---
-            s_info = stock.info
-            pe_val = s_info.get('trailingPE', 0)
-            rev_growth = s_info.get('revenueGrowth', 0) * 100
-
             data_list.append({
-                "style": ai_style, 
-                "icon": ai_style, 
-                "name": f"{info['name']} ({ticker})", 
-                "price": round(close_val, 2),
-                "ai_diag": ai_diag, 
-                "buy": round(suggested_buy, 2), 
-                "sell": round(tech_pre, 2), 
-                "stop": round(dynamic_stop, 2), 
-                "stop_line": round(stop_profit_line, 2), 
-                "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), 
-                "vol": round(vol_ratio, 1), 
-                "slope": round(slope, 2),
-                "bias": round(bias, 2), 
-                "sup": round(tech_sup, 2), 
-                "pre": round(tech_pre, 2),
-                # 🟢 新增：基本面數據
-                "pe": round(pe_val, 1) if pe_val else "N/A",
-                "rev": f"{rev_growth:.1f}%",
-                # 🟢 優化：機構持股 (增加防呆)
-                "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, 
-                "trend": trend_label
+                "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
+                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
+                "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
+                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
+                "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
+                "chip_flow": chip_flow, "trend": trend_label
             })
-            
-            # 新聞抓取 (維持原樣)
             news_dict[info['name']] = get_google_news(info['name'])
         except: pass
 
@@ -351,9 +280,7 @@ for d in data_list:
             <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']} | 
-            <span style="color: #003a8c; font-weight: bold;">本益比: {d['pe']}</span> | 
-            <span style="color: #08979c; font-weight: bold;">營收年增: {d['rev']}</span>
+            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
