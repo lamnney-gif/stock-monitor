@@ -119,9 +119,20 @@ def get_volume_support(df):
 def get_google_news(keyword):
     news = []
     try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
-    except: pass
+        # 擴張關鍵字：增加「展望、營收、半導體」等標籤，讓內容更豐富
+        search_query = quote(f"{keyword} (股價 OR 營收 OR 財報 OR 半導體)")
+        url = f"https://news.google.com/rss/search?q={search_query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
+        
+        feed = feedparser.parse(url)
+        # 增加抓取數量到 10 條
+        for entry in feed.entries[:10]:
+            # 格式化日期，只顯示月/日
+            date_str = ""
+            if hasattr(entry, 'published'):
+                date_str = f"[{entry.published[5:10]}] "
+            news.append(f"{date_str}[{entry.title}]({entry.link})")
+    except:
+        pass
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
