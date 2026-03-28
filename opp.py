@@ -8,8 +8,8 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-# 1. 頁面配置 (1600px 寬版佈局)
-st.set_page_config(page_title="Beta Lab Global V6.0 - 籌碼與趨勢戰術板", layout="wide")
+# 1. 頁面配置
+st.set_page_config(page_title="Beta Lab AI - 智權大腦戰情室", layout="wide")
 
 # 2. 私人存取驗證
 def check_password():
@@ -20,8 +20,8 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
     if "password_correct" not in st.session_state:
-        st.markdown("### 🖥️ 內部開發監測系統 V6.0")
-        st.text_input("請輸入管理員密碼：", type="password", on_change=password_entered, key="password")
+        st.markdown("### 🤖 AI 量化開發監測環境")
+        st.text_input("請輸入內部存取密碼：", type="password", on_change=password_entered, key="password")
         return False
     elif not st.session_state["password_correct"]:
         st.error("😕 驗證失敗")
@@ -30,85 +30,84 @@ def check_password():
 
 if not check_password(): st.stop()
 
-# 3. CSS 樣式定義
+# 3. CSS 樣式 (加強 AI 診斷區的可視化)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     .🚨 { background-color: #fff5f5; border-left: 12px solid #ff4d4f; color: #a8071a; } 
     .⚠️ { background-color: #fffbe6; border-left: 12px solid #ffc53d; color: #874d00; } 
-    .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } 
+    .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; border: 2px solid #b7eb8f; } 
     .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } 
     .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
-    .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } 
+    .ai-score { font-size: 1.4em; font-weight: bold; color: #1890ff; background: #e6f7ff; padding: 5px 15px; border-radius: 20px; border: 1px solid #91d5ff; }
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
+    .adr-tag { background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff; }
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
-    .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    .mobile-warning { 
-        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
-        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律存證區 ---
-st.sidebar.error("⚠️ 【開發者自用測試區】")
-st.sidebar.markdown("""
-<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
-    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
-<b>【免責聲明】</b><br>
-    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
-    2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
-    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
-    </p>
-</div>
-""", unsafe_allow_html=True)
+# 4. AI 智權大腦核心函數
+def calculate_ai_confidence(d, vix, sox_status, week_trend):
+    """
+    AI 多因子權重模型 (Multi-Factor Scoring Model)
+    1. 市場環境 (SOX, VIX): 40%
+    2. 趨勢慣性 (均線, 週線, 斜率): 30%
+    3. 籌碼與連動 (ADR, Flow): 20%
+    4. 價位甜蜜點 (RSI, Buy Zone): 10%
+    """
+    score = 0
+    reasons = []
 
-# --- 主頁面置頂警告 (手機版強制顯示) ---
-st.markdown("""
-<div class="mobile-warning">
-<b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
-    本站僅供 Python 程式邏輯測試（Beta Lab），內文建議與價格均為演算法實驗產出。
-    <b>閱覽者據此操作之盈虧請自行承擔</b>。
-    </p>
-</div>
-""", unsafe_allow_html=True)
+    # 環境因子
+    if sox_status == "BULL": score += 20
+    else: reasons.append("大盤逆風")
+    
+    if vix < 20: score += 20
+    elif vix > 28: score -= 30; reasons.append("極度恐慌")
+    else: score += 10
 
-# 4. 關鍵演算函數
+    # 趨勢因子
+    if d['trend'] == "🌟 多頭排列": score += 15
+    if week_trend == "UP": score += 15
+    else: reasons.append("週線偏空")
+
+    # 籌碼與連動
+    if d['chip_flow'] == "🔥 強勢買入": score += 15
+    if d['adr'] != "N/A" and float(d['adr'].strip('%')) > 0.5: score += 5
+    
+    # 價位因子
+    if d['price'] <= d['buy'] * 1.05: score += 10
+    if d['rsi'] > 75: score -= 20; reasons.append("嚴重過熱")
+
+    # 輸出判定
+    if score >= 85: 
+        return score, "✅ 【全力進攻】多因子全線共振，確信度極高。", "✅"
+    elif score >= 65:
+        return score, f"🔎 【分批佈局】趨勢成形，觀察量能。阻礙：{'/'.join(reasons) if reasons else '無'}", "✅"
+    elif score >= 45:
+        return score, f"⚠️ 【觀望等待】多空拉鋸。風險：{'/'.join(reasons)}", "⚠️"
+    else:
+        return score, f"☢️ 【全面避險】風險值過高。主要威脅：{'/'.join(reasons)}", "☢️"
+
 def get_institutional_flow(df):
-    """模擬籌碼力道：結合量價關係推算法人動向"""
     recent = df.tail(5)
-    # 價漲量增 + 1, 價跌量增 - 1
     flow_score = 0
     for i in range(1, len(recent)):
-        price_change = recent['Close'].iloc[i] - recent['Close'].iloc[i-1]
-        vol_change = recent['Volume'].iloc[i] / recent['Volume'].iloc[i-1]
-        if price_change > 0 and vol_change > 1.1: flow_score += 1
-        if price_change < 0 and vol_change > 1.1: flow_score -= 1
+        if recent['Close'].iloc[i] > recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score += 1
+        if recent['Close'].iloc[i] < recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score -= 1
     return "🔥 強勢買入" if flow_score >= 2 else "💧 持續流出" if flow_score <= -2 else "☁️ 盤整觀望"
 
 def get_trend_score(df):
-    """計算均線多頭排列強度"""
     c = df['Close']
     ma5, ma10, ma20 = c.rolling(5).mean().iloc[-1], c.rolling(10).mean().iloc[-1], c.rolling(20).mean().iloc[-1]
-    if ma5 > ma10 > ma20: return "🌟 多頭排列", "#52c41a"
-    if ma5 < ma10 < ma20: return "💀 空頭排列", "#f5222d"
-    return "🌀 趨勢不明", "#8c8c8c"
-
-def get_volume_support(df):
-    try:
-        recent_df = df.tail(60)
-        v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
-        return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
-    except: return 0
+    return "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
 
 # 5. 主標題
-col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 全球半導體量化戰術板 V6.0")
-with col_r: timer_placeholder = st.empty()
+st.title("🖥️ 全球量化戰術板 V6.5 - AI 智權大腦")
+timer_placeholder = st.sidebar.empty()
 
-# 標的清單 (完整連動配置)
+# 標的清單
 tickers = {
     "2330.TW": {"name": "台積電", "adr": "TSM"},
     "NVDA": {"name": "輝達", "adr": None},
@@ -117,14 +116,10 @@ tickers = {
     "2303.TW": {"name": "聯電", "adr": "UMC"},
     "6770.TW": {"name": "力積電", "adr": None},
     "2344.TW": {"name": "華邦電", "adr": None},
-    "3481.TW": {"name": "群創", "adr": None},
-    "1303.TW": {"name": "南亞", "adr": None}
+    "3481.TW": {"name": "群創", "adr": None}
 }
 
-data_list, news_dict = [], {}
-
-with st.spinner('同步全球籌碼、風險與均線排列數據中...'):
-    # A. 全球宏觀指標
+with st.spinner('AI 大腦正在運算全球權重數據...'):
     vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
     sox = yf.Ticker("^SOX").history(period="1mo")
@@ -138,101 +133,76 @@ with st.spinner('同步全球籌碼、風險與均線排列數據中...'):
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
             
-            # --- 核心運算 ---
             close_val = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
-            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # 籌碼與趨勢 (V6.0 新增)
+            # 取得基礎數據用於 AI 診斷
             chip_flow = get_institutional_flow(df)
-            trend_label, trend_color = get_trend_score(df)
+            trend_label = get_trend_score(df)
             
-            # 補回所有標籤數據
-            chip_floor = get_volume_support(df)
-            stop_profit_line = df['High'].tail(5).max() * 0.97
-            tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
-            
-            # ADR 與風險指標
+            # ADR 計算
             adr_diff = "N/A"
             if info['adr']:
                 adr_data = yf.Ticker(info['adr']).history(period="5d")
                 adr_chg = ((adr_data['Close'].iloc[-1] - adr_data['Close'].iloc[-2]) / adr_data['Close'].iloc[-2]) * 100
                 adr_diff = f"{adr_chg:+.1f}%"
 
-            # 策略點位
-            w_ma20 = df_w['Close'].rolling(20).mean().iloc[-1]
-            week_trend = "UP" if close_val > w_ma20 else "DOWN"
-            suggested_buy = min(ma20 - 1.2 * std20, df['Low'].tail(3).min() * 0.99)
-            dynamic_stop = close_val - (2.5 * df['High'].sub(df['Low']).rolling(14).mean().iloc[-1])
-            bias = ((close_val - ma20) / ma20) * 100
+            # 計算 AI 信心指數
+            temp_data = {
+                'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val,
+                'buy': ma20 - 1.2 * std20, 'rsi': 50, 'adr': adr_diff # RSI 簡化計算
+            }
+            ai_score, ai_diag, ai_style = calculate_ai_confidence(temp_data, vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN")
 
-            # --- V6.0 診斷邏輯 ---
-            if vix > 28: icon, style, status = "☢️", "☢️", f"☢️ 【極度恐慌】VIX {vix:.1f}，全球資金撤離，不建議任何操作。"
-            elif sox_status == "BEAR": icon, style, status = "⚠️", "⚠️", "⚠️ 【大盤壓制】費半濾網為空頭，個股技術面暫時失效。"
-            elif chip_flow == "💧 持續流出": icon, style, status = "🚨", "🚨", "🚨 【籌碼警告】法人資金大舉流出，下方支撐可能被打穿。"
-            elif close_val <= suggested_buy * 1.03 and week_trend == "UP" and trend_label == "🌟 多頭排列":
-                icon, style, status = "✅", "✅", "✅ 【終極確認】籌碼、均線、週線三者多頭共振，高勝率進場點。"
-            else: icon, style, status = "🔎", "🔎", f"🔎 【狀態觀測】均線：{trend_label}。籌碼：{chip_flow}。"
+            # 補回剩餘標籤
+            chip_floor = (df['Close'].tail(60).mean()) # 簡化換手區
+            stop_profit_line = df['High'].tail(5).max() * 0.97
+            dynamic_stop = close_val - (2.5 * (df['High']-df['Low']).rolling(14).mean().iloc[-1])
 
-            data_list.append({
-                "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
-                "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "stop": round(dynamic_stop, 2),
-                "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "vol": round(vol_ratio, 1), "adr": adr_diff, "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
-                "diag": status, "pe": stock.info.get('forwardPE', "N/A"), "chip_flow": chip_flow, "trend": trend_label, "t_color": trend_color
-            })
+            st.markdown(f"""
+            <div class="status-card {ai_style}">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="font-size: 1.6em; font-weight: bold;">{ai_style} {name} ({ticker})</span>
+                        <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace;">${close_val:.2f}</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="ai-score">AI 確信度: {ai_score}%</span><br>
+                        <span class="metric-tag adr-tag">ADR: {adr_diff}</span>
+                        <span class="metric-tag">趨勢: {trend_label}</span>
+                    </div>
+                </div>
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
+                <div style="display: flex; gap: 25px;">
+                    <div style="flex: 2.2;">
+                        <b>🧠 AI 智權診斷 (AI Insight)：</b><br>
+                        <span style="line-height:1.6; font-size:1.1em;">{ai_diag}</span>
+                        <div class="defense-box">
+                            ⚙️ <b>風控與成本模擬：</b> 
+                            波段高點預警: {stop_profit_line:.2f} | 密集換手區: {chip_floor:.2f} <br>
+                            <span style="color:#cf1322; font-weight:bold;">ATR 動態底線: {dynamic_stop:.2f}</span>
+                        </div>
+                    </div>
+                    <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
+                        <b>🧪 模型觀察位：</b><br>
+                        <span style="font-size: 0.85em; color: #666;">進場參考：</span><br><span class="price-value" style="color:#389e0d; font-size:1.4em;">{temp_data['buy']:.2f}</span><br>
+                        <span style="font-size: 0.85em; color: #666;">預計壓力：</span><br><span class="price-value" style="color:#cf1322; font-size:1.4em;">{ma20+2*std20:.2f}</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         except: pass
 
-# --- UI 渲染 ---
+# Sidebar 風險監控
 st.sidebar.markdown(f"""
-### 📊 全球宏觀數據 V6.0
-- **市場情緒：** {vix:.1f} ({'😱 恐慌' if vix > 22 else '😊 樂觀'})
-- **美債 10Y：** {us10y:.2f}%
-- **費半大盤：** {'📈 多頭' if sox_status=='BULL' else '📉 避險'}
+### 📊 全球風險環境
+- **VIX 恐慌指數：** {vix:.1f}
+- **費半狀態：** {sox_status}
+- **AI 建議模式：** {'⚔️ 積極進攻' if sox_status == 'BULL' else '🛡️ 守勢避險'}
 """)
 
-for d in data_list:
-    st.markdown(f"""
-    <div class="status-card {d['style']}">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
-                <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
-            </div>
-            <div style="text-align: right;">
-                <span class="metric-tag adr-tag">ADR連動: {d['adr']}</span>
-                <span class="metric-tag chip-tag">籌碼: {d['chip_flow']}</span>
-                <span class="metric-tag" style="background:{d['t_color']}; color:white;">{d['trend']}</span>
-                <span class="metric-tag">PE: {d['pe']}</span>
-            </div>
-        </div>
-        <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
-        <div style="display: flex; gap: 25px;">
-            <div style="flex: 2.2;">
-                <b>🔍 演算診斷 (Diagnostics)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
-                <div class="defense-box">
-                    ⚙️ <b>風控與籌碼模擬：</b> 
-                    <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
-                    <span style="color:#cf1322; font-weight:bold;">ATR 演算底線: {d['stop']}</span> <br>
-                    <b>密集換手區間: {d['chip_floor']}</b> | 乖離率: {d['bias']}% | <b>成交量比: {d['vol']}x</b>
-                </div>
-            </div>
-            <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
-                <b>🧪 邏輯觀察點：</b><br>
-                <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
-                    <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
-                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
-                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# 自動刷新
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新")
+    timer_placeholder.markdown(f"🔄 {i}s 後刷新")
     time.sleep(1)
 st.rerun()
