@@ -120,7 +120,7 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400) # 👈 AI 診斷一小時才更新一次，省額度
+@st.cache_data(ttl=43200) # 👈 AI 診斷一小時才更新一次，省額度
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
     if ai_engine:
         try:
@@ -271,6 +271,6 @@ for d in data_list:
     """, unsafe_allow_html=True)
 
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
+    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每12小時更新)")
     time.sleep(1)
 st.rerun()
