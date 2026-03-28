@@ -13,41 +13,34 @@ from groq import Groq
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# --- 1. 初始化 AI 引擎 (只跑一次) ---
+# --- AI 核心啟動 (雙引擎自動偵測) ---
 @st.cache_resource
-def get_ai_analysis(name, price):
-    """
-    🧪 測試模式：直接使用 Groq (Llama 3.3)
-    """
-    # 1. 檢查 Secrets 鑰匙
-    if "GROQ_API_KEY" not in st.secrets:
-        return "❌ 錯誤：Streamlit Secrets 裡找不到 'GROQ_API_KEY'。"
-
-    prompt = f"你是半導體股票專家。分析{name}現價{price}。請給出50字內技術面診斷與操作建議。"
-
-    # 2. 直接呼叫 Groq
+def init_ai_engines():
+    engines = {"gemini": None, "groq": None}
+    
+    # 1. 初始化 Gemini
     try:
-        # 從 Secrets 抓鑰匙
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        
-        # 呼叫 Llama 3.3 模型
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "你是一位精通台美半導體股的專業分析師。"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.5, # 讓回答穩一點
-            max_tokens=150   # 限制長度
-        )
-        
-        # 回傳結果
-        return "🚀 [Groq 測試中] " + completion.choices[0].message.content
+        if "GEMINI_API_KEY" in st.secrets:
+            genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
+            # 這裡沿用你原本的自動找模型邏輯，很棒
+            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            target = 'models/gemini-2.5-flash' if 'models/gemini-2.5-flash' in available else available[0]
+            engines["gemini"] = genai.GenerativeModel(target)
+    except Exception:
+        pass # Gemini 失敗沒關係，還有 Groq
 
-    except Exception as e:
-        # 如果噴錯，直接把錯誤訊息秀出來，方便我們抓蟲
-        return f"❌ Groq 引擎報錯：{str(e)}"
+    # 2. 初始化 Groq (新增這部分)
+    try:
+        if "GROQ_API_KEY" in st.secrets:
+            from groq import Groq
+            engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
+    except Exception:
+        pass
+        
+    return engines
 
+# 執行初始化
+ai_engines = init_ai_engines()
 # --- 後面接你的 st.title() 和數據分析邏輯 ---
 st.title("Semiconductor War Room")
 
