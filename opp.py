@@ -222,7 +222,6 @@ for d in data_list:
                 <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
             </div>
             <div style="text-align: right;">
-                <span class="ai-score">AI 確信度: {d['ai_score']}%</span><br>
                 <div style="margin-top:8px;">
                     <span class="metric-tag adr-tag">ADR連動: {d['adr']}</span>
                     <span class="metric-tag chip-tag">籌碼: {d['chip_flow']}</span>
