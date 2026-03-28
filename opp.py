@@ -13,22 +13,27 @@ from groq import Groq
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# --- AI 核心啟動 (自動偵測對接) ---
+# --- 2. AI 核心啟動 (必須放在最前面) ---
 @st.cache_resource
-def init_gemini():
+def init_ai_engines():
+    engines = {"gemini": None, "groq": None}
+    # 初始化 Groq
+    try:
+        if "GROQ_API_KEY" in st.secrets:
+            engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
+    except:
+        pass
+    # 初始化 Gemini
     try:
         if "GEMINI_API_KEY" in st.secrets:
-            api_key = st.secrets["GEMINI_API_KEY"].strip()
-            genai.configure(api_key=api_key)
-            # 自動找尋可用模型，優先選 2.5-flash，避開 404 問題
-            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            target = 'models/gemini-2.5-flash' if 'models/gemini-2.5-flash' in available else available[0]
-            return genai.GenerativeModel(target)
-    except Exception as e:
-        return None
-    return None
+            genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
+            engines["gemini"] = genai.GenerativeModel('gemini-2.0-flash')
+    except:
+        pass
+    return engines
 
-ai_engine = init_gemini()
+# 呼叫初始化
+ai_engines = init_ai_engines()
 
 # 2. 私人存取驗證
 def check_password():
@@ -121,38 +126,68 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400) # 👈 AI 診斷一小時才更新一次，省額度
+@st.cache_data(ttl=43200) # AI 診斷12小時更新一次
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
-    if ai_engine:
+    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
+    
+    # 優先嘗試 Groq (因為剛才測試最穩)
+    if ai_engines["groq"]:
         try:
-            time.sleep(4) 
-            prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
-            res = ai_engine.generate_content(prompt)
+            completion = ai_engines["groq"].chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=200
+            )
+            return " (Groq 備援) " + completion.choices[0].message.content
+        except:
+            pass
+            
+    # 備援嘗試 Gemini
+    if ai_engines["gemini"]:
+        try:
+            res = ai_engines["gemini"].generate_content(prompt)
             return res.text
         except:
-            return "AI 診斷忙碌中，沿用前次分析..."
-    return "AI 未啟動"
+            return "⚠️ AI 引擎暫時忙碌中"
+            
+    return "❌ AI 未啟動 (請檢查 Secrets)"
+
+def get_institutional_flow(df):
+    recent = df.tail(5)
+    flow_score = 0
+    for i in range(1, len(recent)):
+        if recent['Close'].iloc[i] > recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score += 1
+        if recent['Close'].iloc[i] < recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score -= 1
+    return "🔥 強勢買入" if flow_score >= 2 else "💧 持續流出" if flow_score <= -2 else "☁️ 盤整觀望"
+
+def get_volume_support(df):
+    try:
+        recent_df = df.tail(60)
+        v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
+        return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
+    except: return 0
+
+def get_google_news(keyword):
+    news = []
+    try:
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
-    reasons = []
-    
-    # 權重邏輯
     if sox_status == "📈 BULL": score += 20
-    else: reasons.append("大盤逆風")
     if vix < 20: score += 20
-    elif vix > 28: score -= 30; reasons.append("極度恐慌")
+    elif vix > 28: score -= 30
     else: score += 10
     if d['trend'] == "🌟 多頭排列": score += 15
     if week_trend == "UP": score += 15
-    else: reasons.append("週線偏空")
     if d['chip_flow'] == "🔥 強勢買入": score += 15
-    if d['rsi'] > 75: score -= 20; reasons.append("嚴重過熱")
+    if d['rsi'] > 75: score -= 20
 
-    # 呼叫快取 AI
     ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'])
     
-    # --- 重要：這裡要回傳 score, report, style 三個值 ---
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
     elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
