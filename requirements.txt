@@ -5,3 +5,4 @@ numpy
 feedparser
 scikit-learn
 google-generativeai
+groq
