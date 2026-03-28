@@ -66,7 +66,7 @@ def get_google_news(keyword):
 
 # 頂部抬頭
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 半導體大戶戰情室 - 邏輯全功能版")
+with col_t: st.title("🖥️ 開發者自用測試區")
 with col_r: timer_placeholder = st.empty()
 
 data_list, news_dict = [], {}
