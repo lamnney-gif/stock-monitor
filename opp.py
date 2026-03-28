@@ -222,7 +222,6 @@ for d in data_list:
                 <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
             </div>
             <div style="text-align: right;">
-                <span class="ai-score" style="font-size: 1.2em; font-weight: bold; color: #1890ff; background: #e6f7ff; padding: 4px 10px; border-radius: 10px;">AI 確信度: {d['ai_score']}%</span><br>
                 <div style="margin-top:8px;">
                     <span class="metric-tag">ADR: {d['adr']}</span>
                     <span class="metric-tag">籌碼: {d['chip_flow']}</span>
@@ -237,7 +236,7 @@ for d in data_list:
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.2;">
-                <b>🧠 AI 智權診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
+                <b>🧠 智權診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
                 <div class="defense-box">
                     ⚙️ <b>風控與成本模擬：</b> 
                     <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
