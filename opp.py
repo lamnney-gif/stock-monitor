@@ -108,7 +108,7 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     ai_report = "AI 診斷目前不可用"
     if ai_engine:
         try:
-            time.sleep(1) # 避開 Free Tier 頻率限制
+            time.sleep(2) # 避開 Free Tier 頻率限制
             prompt = f"你是量化分析師，分析{name}：現價{d['price']}, RSI{d['rsi']:.1f}, 籌碼{d['chip_flow']}, 趨勢{d['trend']}。請給出80字內診斷。"
             res = ai_engine.generate_content(prompt)
             ai_report = res.text
