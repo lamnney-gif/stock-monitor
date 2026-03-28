@@ -30,7 +30,7 @@ def check_password():
 
 if not check_password(): st.stop()
 
-# 3. CSS 樣式 (確保所有標籤顏色正確)
+# 3. CSS 樣式定義
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -41,12 +41,39 @@ st.markdown("""
     .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
     .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } 
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
-    .adr-tag { background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff; }
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
+    .mobile-warning { 
+        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
+        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# --- 側邊欄：法律存證區 ---
+st.sidebar.error("⚠️ 【開發者自用測試區】")
+st.sidebar.markdown("""
+<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
+    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
+<b>【免責聲明】</b><br>
+    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+    2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 主頁面置頂警告 (手機版強制顯示) ---
+st.markdown("""
+<div class="mobile-warning">
+<b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
+    本站僅供 Python 程式邏輯測試（Beta Lab），內文建議與價格均為演算法實驗產出。
+    <b>閱覽者據此操作之盈虧請自行承擔</b>。
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # 4. 核心演算法函數
 def get_volume_support(df):
