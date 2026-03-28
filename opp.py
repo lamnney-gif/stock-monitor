@@ -190,7 +190,7 @@ with st.spinner('同步全球數據與大盤濾網中...'):
         except: pass
 
 # --- UI 渲染 (維持你原本的 1600px 風格) ---
-st.sidebar.markdown(f"📊 **大盤狀態：** {'📈 多頭' if sox_status=='BULL' else '📉 避險'}")
+st.sidebar.markdown(f"📊 **費城半導體指數：** {'📈 多頭' if sox_status=='BULL' else '📉 避險'}")
 st.sidebar.title("📰 即時情報推播")
 for name, news in news_dict.items():
     if news:
