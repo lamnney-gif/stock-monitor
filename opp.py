@@ -16,45 +16,41 @@ st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="
 # --- 1. 初始化 AI 引擎 (只跑一次) ---
 @st.cache_resource
 def init_all_engines():
-    """將模型實例化，存入緩存以節省效能"""
     try:
-        # 初始化 Gemini
+        # 設定 Gemini
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        gemini_m = genai.GenerativeModel('gemini-2.5-flash')
-        
-        # 初始化 Groq
+        # 設定 Groq
         groq_c = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        
-        return {"gemini": gemini_m, "groq": groq_c}
+        return {"gemini": True, "groq": groq_c}
     except Exception as e:
-        st.error(f"AI 引擎啟動失敗: {e}")
+        st.error(f"⚠️ AI 鑰匙設定錯誤: {e}")
         return None
 
-# 執行初始化 (這就是你原本第 51 行該做的事)
-engines = init_all_engines()
+# 這就是你原本第 51 行的位置，確保它能跑通
+ai_engine = init_all_engines()
 
-# --- 2. 診斷函數 (這裡使用 cache_data，設定 1 小時更新一次) ---
-@st.cache_data(ttl=3600) 
+# --- [核心] 雙引擎分析函數 ---
 def get_ai_analysis(name, price):
-    if not engines:
-        return "❌ AI 引擎未正確設定"
-
-    prompt = f"你是半導體專家。分析{name}現價{price}。請給出50字內技術面診斷。"
-
-    # --- 🔵 優先嘗試 Gemini ---
+    if not ai_engine: return "AI 尚未啟動"
+    prompt = f"分析{name}現價{price}，給出50字診斷。"
+    
+    # 1. 嘗試 Gemini
     try:
-        response = engines["gemini"].generate_content(prompt)
-        return response.text
-    except Exception:
-        # --- 🟠 失敗則切換 Groq ---
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        return model.generate_content(prompt).text
+    except:
+        # 2. 失敗則嘗試 Groq
         try:
-            completion = engines["groq"].chat.completions.create(
+            res = ai_engine["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}]
             )
-            return " (備援 AI) " + completion.choices[0].message.content
-        except Exception:
-            return "❌ AI 服務目前無法使用"
+            return "(備援) " + res.choices[0].message.content
+        except:
+            return "AI 暫時休息中"
+
+# --- 後面接你的 st.title() 和數據分析邏輯 ---
+st.title("Semiconductor War Room")
 
 # 2. 私人存取驗證
 def check_password():
