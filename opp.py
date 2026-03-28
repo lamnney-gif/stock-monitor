@@ -208,9 +208,19 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['rsi'] > 75: score -= 20
 
     # 🟢 修正點：從字典 d 中取出 pe 和 rev_growth 傳給 AI
-    ai_report = get_ai_analysis(
-        name, d['price'], d['rsi'], d['chip_flow'], d['trend'], 
-        d.get('pe', 'N/A'), d.get('rev_growth', 0)
+ai_report = get_ai_analysis(
+        name, 
+        ticker, 
+        d['price'], 
+        d['rsi'], 
+        d['chip_flow'], 
+        d['trend'], 
+        d['chip_floor'], # 👈 記得要在字典裡傳入這個
+        tech_press, 
+        vix, 
+        sox_status, 
+        d.get('pe', 'N/A'), 
+        d.get('rev_growth', 0)
     )
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
