@@ -8,24 +8,45 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
+from groq import Groq
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
 # --- AI 核心啟動 (自動偵測對接) ---
 @st.cache_resource
-def init_gemini():
+def get_ai_analysis(name, price):
+    """
+    雙引擎 AI 診斷：Gemini 優先，Groq 備援
+    """
+    prompt = f"你是半導體股票專家。分析{name}現價{price}。請給出50字內技術面診斷與操作建議。"
+
+    # --- 🔵 第一順位：Gemini ---
     try:
-        if "GEMINI_API_KEY" in st.secrets:
-            api_key = st.secrets["GEMINI_API_KEY"].strip()
-            genai.configure(api_key=api_key)
-            # 自動找尋可用模型，優先選 2.5-flash，避開 404 問題
-            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            target = 'models/gemini-2.5-flash' if 'models/gemini-2.5-flash' in available else available[0]
-            return genai.GenerativeModel(target)
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        if response.text:
+            return response.text
     except Exception as e:
-        return None
-    return None
+        # 如果 Gemini 出錯，顯示一個小小的警告（只有你看得到）
+        st.toast(f"Gemini 暫時休息，正在切換備援 AI...", icon="🔄")
+
+    # --- 🟠 第二順位：Groq (Llama 3.3 大腦) ---
+    try:
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return " (AI 備援) " + completion.choices[0].message.content
+    except Exception as e:
+        return "❌ 兩大 AI 目前皆達到限額，請稍後再試。"
+
+# --- 在你的 UI 迴圈中使用它 ---
+# 假設你的股票名稱是 stock_n，價格是 price_val
+# diagnostic = get_ai_analysis(stock_n, price_val)
+# st.info(diagnostic)
 
 ai_engine = init_gemini()
 
