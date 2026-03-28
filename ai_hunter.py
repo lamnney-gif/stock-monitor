@@ -15,31 +15,38 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 # 你的追蹤清單
 tickers = {"2330.TW": "台積電", "NVDA": "輝達", "2303.TW": "聯電"}
 
-def run():
+def run_advanced_analysis():
     results = {}
     for ticker, name in tickers.items():
         try:
-            print(f"正在抓取 {name}({ticker}) 數據...")
             stock = yf.Ticker(ticker)
-            # 🟢 確保抓到最新股價
-            df = stock.history(period="5d")
-            if df.empty:
-                print(f"⚠️ {name} 沒抓到數據，跳過")
-                continue
-                
-            price = df['Close'].iloc[-1]
-            print(f"💰 {name} 現價: {price:.2f}，正在請求 AI 分析...")
+            df = stock.history(period="1mo") # 抓一個月數據算指標
+            
+            # --- 🟢 這裡同步你 opp.py 的核心指標 ---
+            last_close = df['Close'].iloc[-1]
+            ma20 = df['Close'].rolling(20).mean().iloc[-1]
+            bias = ((last_close - ma20) / ma20) * 100 # 乖離率
+            
+            # 簡單 RSI 邏輯 (跟你 opp.py 一致)
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean().iloc[-1]
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean().iloc[-1]
+            rsi = 100 - (100 / (1 + gain/loss))
 
-            prompt = f"分析{name}({ticker})現價{price:.2f}。請給出50字診斷。"
+            # --- 🤖 把這些「專業數據」塞進 Prompt ---
+            prompt = (f"你是專業交易員。分析{name}({ticker})：\n"
+                      f"1. 現價：{last_close:.2f}\n"
+                      f"2. 月線乖離：{bias:.1f}%\n"
+                      f"3. RSI指標：{rsi:.1f}\n"
+                      f"請根據以上數據，給出50字內的技術面診斷與操作建議。")
+            
             res = model.generate_content(prompt)
+            results[name] = {"content": res.text, "time": time.strftime("%Y-%m-%d %H:%M")}
             
-            if res.text:
-                results[name] = {"content": res.text, "time": time.strftime("%Y-%m-%d %H:%M")}
-                print(f"✨ {name} 分析成功！")
-            
-            time.sleep(10) # 避開頻率限制
+            print(f"✅ {name} 分析完成")
+            time.sleep(10) 
         except Exception as e:
-            print(f"❌ {name} 發生錯誤: {str(e)}")
+            print(f"❌ {name} 出錯: {e}")
             
     # 🟢 最終存檔檢查
     if not results:
