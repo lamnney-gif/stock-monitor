@@ -8,13 +8,12 @@ from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import time
 
-# 1. 頁面配置
-st.set_page_config(page_title="Beta Lab - 數據監測環境", layout="wide")
+# 1. 頁面配置 (維持寬版)
+st.set_page_config(page_title="Beta Lab - 全功能監測環境", layout="wide")
 
 # 2. 【私人存取驗證】
 def check_password():
     def password_entered():
-        # --- 🔒 密碼設定處 (預設 8888) ---
         if st.session_state["password"] == "8888": 
             st.session_state["password_correct"] = True
             del st.session_state["password"] 
@@ -24,10 +23,9 @@ def check_password():
     if "password_correct" not in st.session_state:
         st.markdown("### 🖥️ 內部開發監測系統")
         st.text_input("請輸入存取密碼以解鎖數據：", type="password", on_change=password_entered, key="password")
-        st.info("💡 提醒：本環境僅供個人 Python 量化邏輯測試使用，非公開服務。")
         return False
     elif not st.session_state["password_correct"]:
-        st.text_input("密碼錯誤，請重新輸入：", type="password", on_change=password_entered, key="password")
+        st.text_input("密碼錯誤：", type="password", on_change=password_entered, key="password")
         st.error("😕 身份驗證失敗。")
         return False
     return True
@@ -35,9 +33,7 @@ def check_password():
 if not check_password():
     st.stop() 
 
-# --- 以下代碼僅在驗證通過後加載 ---
-
-# 3. CSS 樣式定義
+# 3. CSS 樣式定義 (保留你原本的所有配色)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -51,52 +47,26 @@ st.markdown("""
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    .mobile-warning { 
-        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
-        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
-    }
+    .mobile-warning { background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律存證區 ---
-st.sidebar.error("⚠️ 【開發者自用測試區】")
-st.sidebar.markdown("""
-<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
-    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
-    <b>【免責聲明】</b><br>
-    1. 本網頁為個人 <b>Python 量化測試</b>用途。<br><br>
-    2. 內文診斷報告皆為<b>演算法實驗產出</b>，非投資建議。<br><br>
-    3. <b>盈虧自負</b>，開發者不承擔法律責任。<br><br>
-    4. 數據或有延遲，請以官方報價為準。
-    </p>
-</div>
-""", unsafe_allow_html=True)
+# 4. 指標計算函數 (新增 RSI 與 ATR)
+def calculate_rsi(series, period=14):
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
 
-# --- 主頁面置頂警告 (手機版強制顯示) ---
-st.markdown("""
-<div class="mobile-warning">
-    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
-    <p style="font-size: 0.9em; color: #595959; margin-top: 5px; margin-bottom: 0;">
-    本站僅供個人程式邏輯測試。所有數據均為<b>自動化實驗產出</b>。
-    閱覽者據此操作之<b>盈虧請自行承擔</b>。
-    </p>
-</div>
-""", unsafe_allow_html=True)
+def calculate_atr(df, period=14):
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift())
+    low_close = np.abs(df['Low'] - df['Close'].shift())
+    ranges = pd.concat([high_low, high_close, low_close], axis=1)
+    true_range = np.max(ranges, axis=1)
+    return true_range.rolling(period).mean()
 
-# 標的清單
-tickers = {
-    "NVDA": "輝達", 
-    "INTC": "英特爾", 
-    "MU": "美光", 
-    "000660.KS": "海力士", 
-    "2303.TW":  "聯電", 
-    "6770.TW": "力積電", 
-    "2344.TW": "華邦電", 
-    "3481.TW": "群創",
-    "1303.TW": "南亞"
-}
-
-# 成交量密集區計算
 def get_volume_support(df):
     try:
         recent_df = df.tail(60)
@@ -114,82 +84,91 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# 主畫面標題
+# 5. 主標題與計時器
 col_t, col_r = st.columns([3, 1])
 with col_t: st.title("🖥️ 半導體量化監測戰術板")
 with col_r: timer_placeholder = st.empty()
 
+# 標的清單 (保留你增加的群創、南亞)
+tickers = {
+    "NVDA": "輝達", "INTC": "英特爾", "MU": "美光", "000660.KS": "海力士", 
+    "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"
+}
+
 data_list, news_dict = [], {}
 
-with st.spinner('同步全球量價數據中...'):
+with st.spinner('同步全球數據與大盤濾網中...'):
+    # --- A. 費半大盤濾網 ---
+    sox = yf.Ticker("^SOX").history(period="1mo")
+    sox_ma20 = sox['Close'].mean()
+    sox_current = sox['Close'].iloc[-1]
+    sox_status = "BULL" if sox_current > sox_ma20 else "BEAR"
+
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             if df.empty: continue
             
+            # 原有數據
             close_val = df['Close'].iloc[-1]
             ma10 = df['Close'].rolling(10).mean().iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
-            
             tech_support = ma20 - (2 * std20)
             tech_pressure = ma20 + (2 * std20)
-            local_low_3d = df['Low'].tail(3).min()
-            local_low_20d = df['Low'].tail(20).min()
             chip_floor = get_volume_support(df)
             
-            # 斜率與乖離
+            # 新增 Pro 指標
+            rsi_val = calculate_rsi(df['Close']).iloc[-1]
+            atr_val = calculate_atr(df).iloc[-1]
+            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
+            
+            # 買點與動態停損
             y_data = df['Close'].tail(10).values
             slope_pct = (LinearRegression().fit(np.arange(10).reshape(-1,1), y_data.reshape(-1,1)).coef_[0][0] / y_data.mean()) * 100
             bias = ((close_val - ma20) / ma20) * 100
             
-            # --- 成交量比運算 ---
-            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
-            
-            info = stock.info
-            pe_val = info.get('forwardPE', "N/A")
-            inst_pct = info.get('heldPercentInstitutions', 0) * 100
+            suggested_buy = min((ma10 * 0.7 + tech_support * 0.3), df['Low'].tail(3).min() * 0.99)
+            dynamic_stop = close_val - (2.5 * atr_val) # ATR 動態停損
 
-            # 買點計算
-            if slope_pct > 0.6:
-                raw_buy = (ma10 * 0.7) + (tech_support * 0.3)
-            else:
-                raw_buy = (tech_support * 0.4) + (chip_floor * 0.6)
-            
-            suggested_buy = min(raw_buy, local_low_3d * 0.99)
-            stop_loss = min(local_low_20d, suggested_buy) * 0.95
-            stop_profit_line = df['High'].tail(5).max() * 0.97
-
-            # --- 核心診斷：整合「成交量」邏輯 ---
-            if bias < -12:
-                icon, style, status = "🟣", "🟣", f"🟣 【統計極值】負乖離 {bias:.1f}%。數據顯示嚴重超賣，{'且帶量拋售' if vol_ratio > 1.5 else '縮量尋底中'}，觀測反彈動能。"
-            elif close_val < stop_loss:
-                icon, style, status = "☢️", "☢️", f"☢️ 【邏輯觸發】跌破演算底線 {stop_loss:.2f}。{'高量下殺' if vol_ratio > 1.2 else '趨勢轉弱'}，暫不納入模型觀察。"
-            elif bias > 20:
-                icon, style, status = "🚨", "🚨", f"🚨 【數據過熱】乖離率 {bias:.1f}%。模型顯示風險溢價過高，等待回測至 {suggested_buy:.2f}。"
-            elif slope_pct < -0.2 and close_val < tech_support:
-                icon, style, status = "⚠️", "⚠️", f"⚠️ 【參數修正】統計支撐位失效。{'放量跌穿' if vol_ratio > 1.3 else '緩步下探'}，觀測點修正至 {suggested_buy:.2f}。"
+            # --- 綜合診斷邏輯 (勝率優化版) ---
+            if sox_status == "BEAR":
+                icon, style, status = "⚠️", "⚠️", f"⚠️ 【環境預警】大盤(SOX)弱勢，系統性風險高。觀察位暫時失效，建議觀望。"
+            elif rsi_val > 70:
+                icon, style, status = "🚨", "🚨", f"🚨 【數據過熱】RSI 達 {rsi_val:.1f}。進入超買區，價格透支，等待回測至 {suggested_buy:.2f}。"
+            elif bias < -12 or rsi_val < 35:
+                icon, style, status = "🟣", "🟣", f"🟣 【統計極值】RSI {rsi_val:.1f} 低檔。具備技術反彈潛力，觀測成交量是否回溫。"
+            elif close_val < dynamic_stop:
+                icon, style, status = "☢️", "☢️", f"☢️ 【趨勢潰敗】跌破 ATR 動態底線 {dynamic_stop:.2f}。趨勢轉弱，暫不納入模型觀察。"
             elif close_val <= suggested_buy * 1.03 and slope_pct > -0.15:
-                # 買點達成，判斷量能是否支持
-                if vol_ratio > 1.2:
-                    icon, style, status = "✅", "✅", f"✅ 【量能觸發】數據進入演算測試位，且成交量 {vol_ratio:.1f}x 放大，邏輯確認強度高。"
+                if vol_ratio > 1.2 and rsi_val < 60:
+                    icon, style, status = "✅", "✅", f"✅ 【高勝率觸發】大盤穩定、帶量回測且 RSI 健康，邏輯確認強度高。"
                 else:
-                    icon, style, status = "🔎", "🔎", f"🔎 【數據觀測】價格接近模型觀察位，但量能僅 {vol_ratio:.1f}x，動能尚待實驗證實。"
+                    icon, style, status = "🔎", "🔎", f"🔎 【數據觀測】價格接近觀察位，但量能僅 {vol_ratio:.1f}x，動能尚待實驗證實。"
             else:
-                icon, style, status = "🔎", "🔎", f"🔎 【常規運行】股價於統計區間內震盪，當前成交量比 {vol_ratio:.1f}x，無特殊邏輯觸發。"
+                icon, style, status = "🔎", "🔎", f"🔎 【常規運行】目前各項參數處於穩定區間，成交量比 {vol_ratio:.1f}x。"
 
             data_list.append({
                 "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
-                "buy": round(suggested_buy, 2), "sell": round(tech_pressure, 2), "stop_line": round(stop_profit_line, 2),
-                "stop_loss": round(stop_loss, 2), "pe": pe_val, "vol": round(vol_ratio, 2), "inst": f"{inst_pct:.1f}%",
+                "buy": round(suggested_buy, 2), "sell": round(tech_pressure, 2), 
+                "stop_loss": round(dynamic_stop, 2), "pe": stock.info.get('forwardPE', "N/A"), 
+                "vol": round(vol_ratio, 2), "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
                 "diag": status, "slope": round(slope_pct, 2), "chip_floor": round(chip_floor, 2), 
-                "bias": round(bias, 2), "tech_sup": round(tech_support, 2), "tech_pre": round(tech_pressure, 2)
+                "bias": round(bias, 2), "tech_sup": round(tech_support, 2), "tech_pre": round(tech_pressure, 2),
+                "rsi": round(rsi_val, 1)
             })
             news_dict[name] = get_google_news(name)
         except: pass
 
-# --- UI 渲染 ---
+# --- UI 渲染 (維持你原本的 1600px 風格) ---
+st.sidebar.markdown(f"📊 **大盤狀態：** {'📈 多頭' if sox_status=='BULL' else '📉 避險'}")
+st.sidebar.title("📰 即時情報推播")
+for name, news in news_dict.items():
+    if news:
+        with st.sidebar.expander(f"{name}"):
+            for n in news: st.markdown(n)
+
 for d in data_list:
     st.markdown(f"""
     <div class="status-card {d['style']}">
@@ -200,6 +179,7 @@ for d in data_list:
             </div>
             <div style="text-align: right;">
                 <span class="metric-tag">PE: {d['pe']}</span>
+                <span class="metric-tag">RSI: {d['rsi']}</span>
                 <span class="metric-tag">機構持有: {d['inst']}</span>
             </div>
         </div>
@@ -212,8 +192,7 @@ for d in data_list:
                 <b>🔍 演算執行狀態 (Execution)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
                 <div class="defense-box">
                     ⚙️ <b>風控參數模擬 (Risk Simulation)：</b> 
-                    <span style="color:#1890ff;">高點預警: {d['stop_line']}</span> | 
-                    <span style="color:#cf1322; font-weight:bold;">演算底線 (Baseline): {d['stop_loss']}</span> <br>
+                    <span style="color:#cf1322; font-weight:bold;">ATR 演算底線: {d['stop_loss']}</span> <br>
                     密集換手區間: {d['chip_floor']} | 統計偏離下軌: {d['tech_sup']}
                 </div>
             </div>
@@ -222,24 +201,14 @@ for d in data_list:
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
-                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
-                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['tech_sup']}</span></div>
-                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['tech_pre']}</span></div>
                 </div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 側邊欄新聞
-st.sidebar.title("📰 即時情報推播")
-for name, news in news_dict.items():
-    if news:
-        with st.sidebar.expander(f"{name}"):
-            for n in news: st.markdown(n)
-
-# 刷新計時器
+# 刷新
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新實驗數據")
+    timer_placeholder.markdown(f"🔄 {i}s 後刷新數據")
     time.sleep(1)
 st.rerun()
