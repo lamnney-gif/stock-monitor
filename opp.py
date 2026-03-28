@@ -33,7 +33,8 @@ st.markdown("""
 # --- 側邊欄：法律防護區 ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
-<div class="disclaimer-box">
+<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
+        <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
 <b>【免責聲明】</b><br>
 1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
 2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
