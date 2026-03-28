@@ -144,11 +144,12 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400) # AI 診斷12小時更新一次
-def get_ai_analysis(name, price, rsi, chip_flow, trend):
+@st.cache_data(ttl=14400) 
+# 🟢 修正點：增加 pe 和 rev 參數接收
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+    # 這裡的 Prompt 已經正確引用了 pe 和 rev
     prompt = f"你是量化分析師，分析{name}：現價{price}, 本益比{pe}, 營收年增{rev}%, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}，加入新聞和消息。請給出80字內精闢診斷和未來動向。"
     
-    # 優先嘗試 Groq (因為剛才測試最穩)
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
@@ -156,20 +157,16 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend):
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200
             )
-            return " (Groq 備援) " + completion.choices[0].message.content
-        except:
-            pass
+            return completion.choices[0].message.content
+        except: pass
             
-    # 備援嘗試 Gemini
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
             return res.text
-        except:
-            return "⚠️ AI 引擎暫時忙碌中"
+        except: return "⚠️ AI 引擎暫時忙碌中"
             
-    return "❌ AI 未啟動 (請檢查 Secrets)"
-
+    return "❌ AI 未啟動"
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -204,7 +201,11 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'])
+    # 🟢 修正點：從字典 d 中取出 pe 和 rev_growth 傳給 AI
+    ai_report = get_ai_analysis(
+        name, d['price'], d['rsi'], d['chip_flow'], d['trend'], 
+        d.get('pe', 'N/A'), d.get('rev_growth', 0)
+    )
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
