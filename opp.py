@@ -137,14 +137,35 @@ def get_google_news(keyword):
 
 @st.cache_data(ttl=43200) # 👈 AI 診斷12小時才更新一次，省額度
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
+    # 建立分析內容（Prompt）
+    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
+
+    # --- 🔵 第一順位：Gemini (你原本的 ai_engine) ---
     if ai_engine:
         try:
-            time.sleep(10) 
-            prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
+            # 💡 拿掉 time.sleep(10)，改用嘗試機制
             res = ai_engine.generate_content(prompt)
-            return res.text
-        except:
-            return "AI 診斷忙碌中，沿用前次分析..."
+            if res.text:
+                return res.text
+        except Exception:
+            # 如果 Gemini 報錯（例如 429 額度爆了），執行下面的 Groq
+            st.toast(f"🔄 {name}：Gemini 忙碌，切換 Groq 備援中...", icon="⚡")
+
+    # --- 🟠 第二順位：Groq (Llama 3.3 大腦) ---
+    # 這裡假設你在上面的 init_gemini 裡也有初始化 Groq
+    try:
+        from groq import Groq
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200
+        )
+        return " (AI 備援) " + completion.choices[0].message.content
+    except Exception as e:
+        # 如果兩邊都失敗
+        return "⚠️ AI 診斷目前達到限額，請參考技術指標自主判斷。"
+
     return "AI 未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
