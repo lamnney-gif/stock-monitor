@@ -13,42 +13,48 @@ from groq import Groq
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# --- AI 核心啟動 (自動偵測對接) ---
+# --- 1. 初始化 AI 引擎 (只跑一次) ---
 @st.cache_resource
-def get_ai_analysis(name, price):
-    """
-    雙引擎 AI 診斷：Gemini 優先，Groq 備援
-    """
-    prompt = f"你是半導體股票專家。分析{name}現價{price}。請給出50字內技術面診斷與操作建議。"
-
-    # --- 🔵 第一順位：Gemini ---
+def init_all_engines():
+    """將模型實例化，存入緩存以節省效能"""
     try:
+        # 初始化 Gemini
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt)
-        if response.text:
-            return response.text
+        gemini_m = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # 初始化 Groq
+        groq_c = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        
+        return {"gemini": gemini_m, "groq": groq_c}
     except Exception as e:
-        # 如果 Gemini 出錯，顯示一個小小的警告（只有你看得到）
-        st.toast(f"Gemini 暫時休息，正在切換備援 AI...", icon="🔄")
+        st.error(f"AI 引擎啟動失敗: {e}")
+        return None
 
-    # --- 🟠 第二順位：Groq (Llama 3.3 大腦) ---
+# 執行初始化 (這就是你原本第 51 行該做的事)
+engines = init_all_engines()
+
+# --- 2. 診斷函數 (這裡使用 cache_data，設定 1 小時更新一次) ---
+@st.cache_data(ttl=3600) 
+def get_ai_analysis(name, price):
+    if not engines:
+        return "❌ AI 引擎未正確設定"
+
+    prompt = f"你是半導體專家。分析{name}現價{price}。請給出50字內技術面診斷。"
+
+    # --- 🔵 優先嘗試 Gemini ---
     try:
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return " (AI 備援) " + completion.choices[0].message.content
-    except Exception as e:
-        return "❌ 兩大 AI 目前皆達到限額，請稍後再試。"
-
-# --- 在你的 UI 迴圈中使用它 ---
-# 假設你的股票名稱是 stock_n，價格是 price_val
-# diagnostic = get_ai_analysis(stock_n, price_val)
-# st.info(diagnostic)
-
-ai_engine = init_gemini()
+        response = engines["gemini"].generate_content(prompt)
+        return response.text
+    except Exception:
+        # --- 🟠 失敗則切換 Groq ---
+        try:
+            completion = engines["groq"].chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return " (備援 AI) " + completion.choices[0].message.content
+        except Exception:
+            return "❌ AI 服務目前無法使用"
 
 # 2. 私人存取驗證
 def check_password():
