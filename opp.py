@@ -35,24 +35,31 @@ def init_ai_engines():
 # 呼叫初始化
 ai_engines = init_ai_engines()
 
-# 2. 私人存取驗證
+# 2. 修改後的私密存取驗證 (加入防呆，防止掛機報錯)
 def check_password():
-    def password_entered():
-        if st.session_state["password"] == "8888": 
-            st.session_state["password_correct"] = True
-            del st.session_state["password"] 
-        else:
-            st.session_state["password_correct"] = False
-    if "password_correct" not in st.session_state:
-        st.markdown("### 🖥️ 內部開發監測系統 V6.8")
-        st.text_input("請輸入存取密碼：", type="password", on_change=password_entered, key="password")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.error("😕 驗證失敗")
-        return False
-    return True
+    # 如果已經驗證成功了，直接過
+    if st.session_state.get("password_correct", False):
+        return True
 
-if not check_password(): st.stop()
+    # 顯示登入介面
+    st.markdown("### 🖥️ 內部開發監測系統 V6.8")
+    
+    # 使用 .get() 來安全讀取，避免 KeyError
+    pwd = st.text_input("請輸入存取密碼：", type="password", key="password_input")
+    
+    if pwd: # 如果使用者有輸入東西
+        if pwd == "8888":
+            st.session_state["password_correct"] = True
+            st.rerun() # 驗證成功立即重整
+        else:
+            st.error("😕 驗證失敗")
+            return False
+            
+    return False
+
+# 呼叫檢查
+if not check_password():
+    st.stop()
 
 # 3. CSS 樣式
 st.markdown("""
