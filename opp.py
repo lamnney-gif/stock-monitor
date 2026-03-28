@@ -272,6 +272,6 @@ for d in data_list:
     """, unsafe_allow_html=True)
 
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每小時更新)")
+    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
     time.sleep(1)
 st.rerun()
