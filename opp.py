@@ -48,7 +48,7 @@ def check_password():
 
 if not check_password(): st.stop()
 
-# 3. CSS 樣式定義
+# 3. CSS 樣式
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -57,13 +57,42 @@ st.markdown("""
     .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } 
     .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } 
     .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
+    .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } 
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    .mobile-warning { background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f; }
+    .mobile-warning { 
+        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
+        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# --- 側邊欄：法律防護區 ---
+st.sidebar.error("⚠️ 【開發者自用測試區】")
+st.sidebar.markdown("""
+<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
+    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
+    <b>【免責聲明】</b><br>
+    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+    2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 主頁面置頂警告 (確保手機版能看到) ---
+st.markdown("""
+<div class="mobile-warning">
+    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境 (Beta Lab)</b><br>
+    <p style="font-size: 0.9em; color: #595959; margin-top: 5px; margin-bottom: 0;">
+    本站僅供個人程式邏輯測試，所有數據與診斷均為<b>自動化實驗產出，非投資建議</b>。
+    閱覽者據此操作之<b>盈虧請自行承擔</b>。詳細條款請參閱左側選單。
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # 4. 核心演算函數
 def get_institutional_flow(df):
@@ -91,13 +120,13 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (快取保護實裝) ---
 
-@st.cache_data(ttl=1800) # 👈 重要：記憶 30 分鐘，這期間重新整理「完全不噴額度」
+@st.cache_data(ttl=3600) # 👈 重要：記憶 60 分鐘，這期間重新整理「完全不噴額度」
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
     """獨立的 AI 請求函數，具備快取記憶功能"""
     if ai_engine:
         try:
             # 穩定的呼吸時間，10 檔標的約 20 秒跑完，但因為有快取，一小時只要跑這一次
-            time.sleep(2) 
+            time.sleep(5) 
             prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
             res = ai_engine.generate_content(prompt)
             return res.text
@@ -137,7 +166,9 @@ with col_r: timer_placeholder = st.empty()
 
 tickers = {
     "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
-
+    "TSM": {"name": "台積電ADR", "adr": None}, "MU": {"name": "美光", "adr": None},
+    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
+    "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}
 }
 
 data_list, news_dict = [], {}
@@ -239,7 +270,7 @@ for d in data_list:
     </div>
     """, unsafe_allow_html=True)
 
-for i in range(3600, 0, -1):
-    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新")
+for i in range(60, 0, -1):
+    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每小時更新)")
     time.sleep(1)
 st.rerun()
