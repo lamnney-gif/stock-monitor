@@ -264,6 +264,10 @@ for d in data_list:
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div><span class="price-label">🟢 觀察點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
+                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
+                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['tech_sup']}</span></div>
+                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['tech_pre']}</span></div>
+                </div>
                 </div>
             </div>
         </div>
