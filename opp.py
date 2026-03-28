@@ -11,7 +11,7 @@ import time
 # 1. 頁面配置
 st.set_page_config(page_title="開發者自用測試區", layout="wide")
 
-# 2. CSS 樣式 (包含警告框樣式)
+# 2. CSS 樣式 (新增 .top-disclaimer 樣式)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -25,21 +25,44 @@ st.markdown("""
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    /* 免責聲明樣式 */
+    
+    /* 免責聲明樣式 (側邊欄) */
     .disclaimer-box { background-color: #fafafa; border: 1px solid #d9d9d9; padding: 15px; border-radius: 8px; font-size: 0.85em; color: #595959; }
+    
+    /* 主頁面置頂警告 (手機版重點) */
+    .mobile-warning { 
+        background-color: #fff2f0; 
+        border: 2px solid #ffccc7; 
+        padding: 15px; 
+        border-radius: 10px; 
+        margin-bottom: 20px; 
+        border-left: 10px solid #ff4d4f;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律防護區 ---
+# --- 側邊欄：法律防護區 (保留不變) ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
-        <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
-<b>【免責聲明】</b><br>
-1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
-2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
-4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
+    <b>【免責聲明】</b><br>
+    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+    2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 主頁面置頂區 (新增：解決手機看不到側邊欄的問題) ---
+st.markdown("""
+<div class="mobile-warning">
+    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境 (Beta Lab)</b><br>
+    <p style="font-size: 0.9em; color: #595959; margin-top: 5px; margin-bottom: 0;">
+    本站僅供個人程式邏輯測試，所有數據與診斷均為<b>自動化實驗產出，非投資建議</b>。
+    閱覽者據此操作之<b>盈虧請自行承擔</b>，開發者不負任何法律責任。詳細條款請參閱左側選單。
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
