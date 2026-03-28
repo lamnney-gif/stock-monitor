@@ -146,7 +146,7 @@ def get_google_news(keyword):
 
 @st.cache_data(ttl=14400) # AI 診斷12小時更新一次
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
-    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}，加入新聞和消息。請給出80字內精闢診斷和未來動向。"
+    prompt = f"你是量化分析師，分析{name}：現價{price}, 本益比{pe}, 營收年增{rev}%, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}，加入新聞和消息。請給出80字內精闢診斷和未來動向。"
     
     # 優先嘗試 Groq (因為剛才測試最穩)
     if ai_engines["groq"]:
@@ -233,6 +233,9 @@ with st.spinner('同步數據與 AI 運算中...'):
     for ticker, info in tickers.items():
         try:
             stock = yf.Ticker(ticker)
+            pe_val = s_info.get('trailingPE', 0) # 抓不到就給 0
+            rev_growth = s_info.get('revenueGrowth', 0) * 100 # 轉為百分比
+            
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
@@ -264,19 +267,42 @@ with st.spinner('同步數據與 AI 運算中...'):
             dynamic_stop = close_val - (2.5 * atr_val)
 
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_val, 'rev_growth': rev_growth},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
+# --- 在 data_list.append 之前，確保我們先從 stock.info 抓到這兩項 ---
+            s_info = stock.info
+            pe_val = s_info.get('trailingPE', 0)
+            rev_growth = s_info.get('revenueGrowth', 0) * 100
+
             data_list.append({
-                "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
-                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
-                "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
-                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
-                "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label
+                "style": ai_style, 
+                "icon": ai_style, 
+                "name": f"{info['name']} ({ticker})", 
+                "price": round(close_val, 2),
+                "ai_diag": ai_diag, 
+                "buy": round(suggested_buy, 2), 
+                "sell": round(tech_pre, 2), 
+                "stop": round(dynamic_stop, 2), 
+                "stop_line": round(stop_profit_line, 2), 
+                "chip_floor": round(chip_floor, 2),
+                "rsi": round(rsi_val, 1), 
+                "vol": round(vol_ratio, 1), 
+                "slope": round(slope, 2),
+                "bias": round(bias, 2), 
+                "sup": round(tech_sup, 2), 
+                "pre": round(tech_pre, 2),
+                # 🟢 新增：基本面數據
+                "pe": round(pe_val, 1) if pe_val else "N/A",
+                "rev": f"{rev_growth:.1f}%",
+                # 🟢 優化：機構持股 (增加防呆)
+                "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
+                "chip_flow": chip_flow, 
+                "trend": trend_label
             })
+            
+            # 新聞抓取 (維持原樣)
             news_dict[info['name']] = get_google_news(info['name'])
         except: pass
 
@@ -297,7 +323,9 @@ for d in data_list:
             <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']}
+            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']} | 
+            <span style="color: #003a8c; font-weight: bold;">本益比: {d['pe']}</span> | 
+            <span style="color: #08979c; font-weight: bold;">營收年增: {d['rev']}</span>
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
