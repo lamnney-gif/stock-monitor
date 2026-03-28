@@ -159,7 +159,7 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
 
 # 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 全球量化戰鬥系統 V6.8 - 全數據 AI 版")
+with col_t: st.title("🖥️ 測試 全數據 AI 版")
 with col_r: timer_placeholder = st.empty()
 
 tickers = {
