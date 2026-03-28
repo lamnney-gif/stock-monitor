@@ -120,7 +120,7 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=43200) # 👈 AI 診斷一小時才更新一次，省額度
+@st.cache_data(ttl=43200) # 👈 AI 診斷12小時才更新一次，省額度
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
     if ai_engine:
         try:
