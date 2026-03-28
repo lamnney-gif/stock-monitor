@@ -4,7 +4,7 @@ import json, os, time
 
 # 讀取保險箱的 Key
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # 你的追蹤清單
 tickers = {"2330.TW": "台積電", "NVDA": "輝達", "TSM": "台積電ADR", "2303.TW": "聯電"}
