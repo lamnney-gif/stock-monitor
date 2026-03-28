@@ -2,132 +2,263 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import google.generativeai as genai
-import time
+import feedparser
+from datetime import datetime
 from urllib.parse import quote
+from sklearn.linear_model import LinearRegression
+import time
 
-# 1. 頁面基礎配置
-st.set_page_config(page_title="Beta Lab V11.5 - 數據全回歸", layout="wide")
+# 1. 頁面配置 (1600px 寬版)
+st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# 2. 安全驗證
-if "password_correct" not in st.session_state:
-    st.markdown("### 🖥️ 內部開發監測系統 V11.5")
-    pwd = st.text_input("存取密碼", type="password")
-    if pwd == "8888":
-        st.session_state["password_correct"] = True
-        st.rerun()
-    st.stop()
+# 2. 私人存取驗證
+def check_password():
+    def password_entered():
+        if st.session_state["password"] == "8888": 
+            st.session_state["password_correct"] = True
+            del st.session_state["password"] 
+        else:
+            st.session_state["password_correct"] = False
+    if "password_correct" not in st.session_state:
+        st.markdown("### 🖥️ 內部開發監測系統 V6.8")
+        st.text_input("請輸入存取密碼：", type="password", on_change=password_entered, key="password")
+        return False
+    elif not st.session_state["password_correct"]:
+        st.error("😕 驗證失敗")
+        return False
+    return True
 
-# --- [核心修正] 針對新 Key 的啟動邏輯，避開 404 ---
-@st.cache_resource
-def init_gemini():
-    try:
-        if "GEMINI_API_KEY" not in st.secrets:
-            return None, "尚未在 Secrets 設定 Key"
-        
-        api_key = st.secrets["GEMINI_API_KEY"].strip()
-        genai.configure(api_key=api_key)
-        
-        # 使用完整的 models/ 路徑是解決 404 的關鍵
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
-        return model, "✅ AI 已連線"
-    except Exception as e:
-        return None, f"❌ AI 啟動失敗: {str(e)}"
+if not check_password(): st.stop()
 
-ai_model, ai_status = init_gemini()
-
-# 3. CSS 戰鬥樣式 (確保視覺數據清晰)
+# 3. CSS 樣式定義
 st.markdown("""
     <style>
-    .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #ddd; background: white; box-shadow: 2px 4px 12px rgba(0,0,0,0.08); }
-    .ai-diag-box { background: #f0f5ff; border-left: 6px solid #1890ff; padding: 18px; border-radius: 10px; margin: 15px 0; color: #002766; font-size: 1.05em; }
-    .metric-tag { display: inline-block; padding: 4px 12px; background: #f5f5f5; border-radius: 6px; margin-right: 8px; font-weight: bold; }
-    .defense-box { background: #fcfcfc; border: 1.5px dashed #595959; padding: 15px; border-radius: 10px; margin-top: 15px; }
-    .price-value { font-family: monospace; font-weight: bold; color: #d4380d; font-size: 1.1em; }
+    .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .🚨 { background-color: #fff5f5; border-left: 12px solid #ff4d4f; color: #a8071a; } 
+    .⚠️ { background-color: #fffbe6; border-left: 12px solid #ffc53d; color: #874d00; } 
+    .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } 
+    .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } 
+    .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
+    .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } 
+    .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
+    .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
+    .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
+    .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
+    .mobile-warning { 
+        background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
+        border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. 數據演算函數
+# --- 側邊欄：法律存證區 ---
+st.sidebar.error("⚠️ 【開發者自用測試區】")
+st.sidebar.markdown("""
+<div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
+    <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
+<b>【免責聲明】</b><br>
+    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+    2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 主頁面置頂警告 (手機版強制顯示) ---
+st.markdown("""
+<div class="mobile-warning">
+<b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
+    本站僅供 Python 程式邏輯測試（Beta Lab），內文建議與價格均為演算法實驗產出。
+    <b>閱覽者據此操作之盈虧請自行承擔</b>。
+    </p>
+</div>
+""", unsafe_allow_html=True)
+# 4. 核心演算函數 (補回所有精密運算)
+def get_institutional_flow(df):
+    recent = df.tail(5)
+    flow_score = 0
+    for i in range(1, len(recent)):
+        if recent['Close'].iloc[i] > recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score += 1
+        if recent['Close'].iloc[i] < recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score -= 1
+    return "🔥 強勢買入" if flow_score >= 2 else "💧 持續流出" if flow_score <= -2 else "☁️ 盤整觀望"
+
 def get_volume_support(df):
     try:
-        # 計算密集換手區成本
-        v_hist = np.histogram(df['Close'].tail(60), bins=10, weights=df['Volume'].tail(60))
+        recent_df = df.tail(60)
+        v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# 5. 主程式監控迴圈
-tickers = {"2330.TW": "台積電", "NVDA": "輝達", "TSM": "台積電ADR", "MU": "美光", "2303.TW": "聯電"}
-
-st.title("🖥️ 全球量化戰鬥系統 V11.5")
-st.info(f"系統診斷：{ai_status}")
-
-for ticker, name in tickers.items():
+def get_google_news(keyword):
+    news = []
     try:
-        stock = yf.Ticker(ticker)
-        df = stock.history(period="1y")
-        if df.empty: continue
-        
-        # --- [數據回歸] 核心指標計算 ---
-        close = df['Close'].iloc[-1]
-        ma20 = df['Close'].rolling(20).mean().iloc[-1]
-        std20 = df['Close'].rolling(20).std().iloc[-1]
-        rsi = (df['Close'].diff().where(df['Close'].diff()>0,0).rolling(14).mean() / df['Close'].diff().abs().rolling(14).mean()*100).iloc[-1]
-        
-        # 關鍵數據點
-        swing_high_warn = df['High'].tail(5).max() * 0.97 # 波段高點預警
-        atr = (df['High'] - df['Low']).rolling(14).mean().iloc[-1]
-        defense_line = close - (2.5 * atr)               # ATR 底線
-        vol_support = get_volume_support(df)             # 密集換手區
-        obs_point = ma20 - 1.2 * std20                   # 觀察點
-        pressure_line = ma20 + 2 * std20                 # 壓力位
-        
-        # AI 診斷執行
-        diag_text = "AI 診斷啟動中..."
-        if ai_model:
-            try:
-                prompt = f"分析{name}({ticker})：現價{close:.2f}, RSI{rsi:.1f}, 支撐{vol_support:.2f}。請給100字內診斷及建議。"
-                res = ai_model.generate_content(prompt)
-                diag_text = res.text
-            except Exception as e:
-                diag_text = f"⚠️ AI 診斷暫時受限: {str(e)}"
-        else:
-            diag_text = "❌ AI 未啟動，請確認 Secrets 中的 Key 並重啟 App。"
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
 
-        # 6. UI 渲染 (確保數據權限完整呈現)
-        st.markdown(f"""
-        <div class="status-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:1.7em; font-weight:bold;">{name} ({ticker}) — <span style="font-family:monospace;">${close:.2f}</span></span>
-                <div>
-                    <span class="metric-tag">RSI: {rsi:.1f}</span>
-                    <span class="metric-tag">PE: {stock.info.get('forwardPE', 'N/A')}</span>
-                </div>
-            </div>
+# 5. AI 權重診斷腦 (核心加權)
+def calculate_ai_confidence(d, vix, sox_status, week_trend):
+    score = 0
+    reasons = []
+    if sox_status == "BULL": score += 20
+    else: reasons.append("大盤逆風")
+    if vix < 20: score += 20
+    elif vix > 28: score -= 30; reasons.append("極度恐慌")
+    else: score += 10
+    if d['trend'] == "🌟 多頭排列": score += 15
+    if week_trend == "UP": score += 15
+    else: reasons.append("週線偏空")
+    if d['chip_flow'] == "🔥 強勢買入": score += 15
+    if d['adr'] != "N/A" and float(d['adr'].strip('%')) > 0.5: score += 5
+    if d['price'] <= d['buy'] * 1.05: score += 10
+    if d['rsi'] > 75: score -= 20; reasons.append("嚴重過熱")
+    
+    if score >= 85: return score, "✅ 【強力進攻】多因子全線共振，確信度極高。", "✅"
+    elif score >= 65: return score, f"🔎 【分批佈局】趨勢成形，觀察量能。阻礙：{'/'.join(reasons) if reasons else '無'}", "✅"
+    elif score >= 45: return score, f"⚠️ 【觀望等待】多空拉鋸。風險：{'/'.join(reasons)}", "⚠️"
+    else: return score, f"☢️ 【全面避險】風險值過高。主要威脅：{'/'.join(reasons)}", "☢️"
+
+# 6. 主標題
+col_t, col_r = st.columns([3, 1])
+with col_t: st.title("🖥️ 全球量化戰鬥系統 V6.8 - 全數據 AI 版")
+with col_r: timer_placeholder = st.empty()
+
+# 標的清單
+tickers = {
+    "2330.TW": {"name": "台積電", "adr": "TSM"},
+    "NVDA": {"name": "輝達", "adr": None},
+    "TSM": {"name": "台積電ADR", "adr": None},
+    "MU": {"name": "美光", "adr": None},
+    "2303.TW": {"name": "聯電", "adr": "UMC"},
+    "6770.TW": {"name": "力積電", "adr": None},
+    "2344.TW": {"name": "華邦電", "adr": None},
+    "3481.TW": {"name": "群創", "adr": None},
+    "1303.TW": {"name": "南亞", "adr": None}
+}
+
+data_list, news_dict = [], {}
+
+with st.spinner('正在同步全球數據、籌碼、均線與 AI 評分中...'):
+    vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
+    us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
+    sox = yf.Ticker("^SOX").history(period="1mo")
+    sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
+
+    for ticker, info in tickers.items():
+        try:
+            name = info['name']
+            stock = yf.Ticker(ticker)
+            df = stock.history(period="1y")
+            df_w = stock.history(period="2y", interval="1wk")
+            if df.empty: continue
             
-            <div class="ai-diag-box">
-                <b>🤖 Gemini AI 專業分析報告：</b><br>{diag_text}
-            </div>
+            # --- 數據運算 ---
+            close_val = df['Close'].iloc[-1]
+            ma20 = df['Close'].rolling(20).mean().iloc[-1]
+            std20 = df['Close'].rolling(20).std().iloc[-1]
+            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
+            
+            # RSI & ATR
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
+            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
+            
+            # 趨勢與籌碼
+            chip_flow = get_institutional_flow(df)
+            ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
+            trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
+            bias = ((close_val - ma20) / ma20) * 100
+            slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            <div style="display: flex; gap: 20px;">
-                <div style="flex: 2;">
-                    <div class="defense-box">
-                        🛡️ <b>關鍵防禦指標 (數據權限已回歸)：</b><br>
-                        波段高點預警: <span class="price-value">{swing_high_warn:.2f}</span> | 
-                        ATR 底線(停損): <span class="price-value">{defense_line:.2f}</span> <br>
-                        密集換手區(成本支撐): <span class="price-value">{vol_support:.2f}</span>
-                    </div>
-                </div>
-                <div style="flex: 1; background: #fffbe6; padding: 15px; border-radius: 10px; border: 1px solid #ffe58f;">
-                    <b>🧪 量化預測點位：</b><br>
-                    🟢 <b>進場觀察點</b>: <span style="color:green; font-weight:bold; font-size:1.1em;">{obs_point:.2f}</span><br>
-                    🎯 <b>預計壓力位</b>: <span style="color:red; font-weight:bold; font-size:1.1em;">{pressure_line:.2f}</span>
+            # 補回：波段高點、換手區、支撐壓力
+            chip_floor = get_volume_support(df)
+            stop_profit_line = df['High'].tail(5).max() * 0.97
+            tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
+            suggested_buy = min(ma20 - 1.2 * std20, df['Low'].tail(3).min() * 0.99)
+            dynamic_stop = close_val - (2.5 * atr_val)
+
+            # ADR 與 AI 評分
+            adr_diff = "N/A"
+            if info['adr']:
+                adr_data = yf.Ticker(info['adr']).history(period="5d")
+                adr_chg = ((adr_data['Close'].iloc[-1] - adr_data['Close'].iloc[-2]) / adr_data['Close'].iloc[-2]) * 100
+                adr_diff = f"{adr_chg:+.1f}%"
+
+            ai_score, ai_diag, ai_style = calculate_ai_confidence(
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'buy': suggested_buy, 'rsi': rsi_val, 'adr': adr_diff},
+                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN"
+            )
+
+            data_list.append({
+                "icon": ai_style, "style": ai_style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
+                "ai_score": ai_score, "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
+                "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "adr": adr_diff, "slope": round(slope, 2),
+                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
+                "pe": stock.info.get('forwardPE', "N/A"), "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
+                "chip_flow": chip_flow, "trend": trend_label
+            })
+            news_dict[name] = get_google_news(name)
+        except: pass
+
+# --- UI 渲染 ---
+st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f} ({'😱' if vix > 22 else '😊'})\n- 10Y Yield: {us10y:.2f}%\n- **SOX 趨勢: {sox_status}**")
+st.sidebar.title("📰 即時情報")
+for name, news in news_dict.items():
+    if news:
+        with st.sidebar.expander(name):
+            for n in news: st.markdown(n)
+
+for d in data_list:
+    st.markdown(f"""
+    <div class="status-card {d['style']}">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
+                <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
+            </div>
+            <div style="text-align: right;">
+                <div style="margin-top:8px;">
+                    <span class="metric-tag">ADR: {d['adr']}</span>
+                    <span class="metric-tag">籌碼: {d['chip_flow']}</span>
+                    <span class="metric-tag">PE: {d['pe']}</span>
+                    <span class="metric-tag">RSI: {d['rsi']}</span>
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"解析 {ticker} 失敗: {e}")
+        <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
+            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | <b>成交量比: {d['vol']}x</b> | 機構: {d['inst']}
+        </div>
+        <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
+        <div style="display: flex; gap: 25px;">
+            <div style="flex: 2.2;">
+                <b>🧠 智權診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
+                <div class="defense-box">
+                    ⚙️ <b>風控與成本模擬：</b> 
+                    <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
+                    <span style="color:#cf1322; font-weight:bold;">ATR 演算底線: {d['stop']}</span> <br>
+                    <b>密集換手區間: {d['chip_floor']}</b> | 統計支撐下軌: {d['sup']}
+                </div>
+            </div>
+            <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
+                <b>🧪 邏輯回測參數：</b><br>
+                <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
+                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
+                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
+                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# 60秒自動刷新
-time.sleep(60)
+for i in range(60, 0, -1):
+    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新")
+    time.sleep(1)
 st.rerun()
