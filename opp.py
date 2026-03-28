@@ -9,7 +9,7 @@ from sklearn.linear_model import LinearRegression
 import time
 
 # 1. 頁面配置
-st.set_page_config(page_title="半導體大戶戰情室-超跌紫色版", layout="wide")
+st.set_page_config(page_title="開發者自用測試區", layout="wide")
 
 # 2. CSS 樣式 (包含警告框樣式)
 st.markdown("""
