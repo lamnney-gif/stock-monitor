@@ -15,29 +15,25 @@ st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="
 
 # --- AI 核心啟動 (雙引擎自動偵測) ---
 @st.cache_resource
-def init_ai_engines():
-    engines = {"gemini": None, "groq": None}
-    
-    # 1. 初始化 Gemini
+def get_ai_analysis(name, price, rsi, chip_flow, trend):
+    # 這就是剛才在你電腦測試成功的邏輯
     try:
-        if "GEMINI_API_KEY" in st.secrets:
-            genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
-            # 這裡沿用你原本的自動找模型邏輯，很棒
-            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            target = 'models/gemini-2.5-flash' if 'models/gemini-2.5-flash' in available else available[0]
-            engines["gemini"] = genai.GenerativeModel(target)
-    except Exception:
-        pass # Gemini 失敗沒關係，還有 Groq
-
-    # 2. 初始化 Groq (新增這部分)
-    try:
-        if "GROQ_API_KEY" in st.secrets:
-            from groq import Groq
-            engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
-    except Exception:
-        pass
+        # 直接從 Secrets 拿 Key
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         
-    return engines
+        prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出50字內診斷。"
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        
+        return "🚀 " + completion.choices[0].message.content
+        
+    except Exception as e:
+        # 如果雲端報錯，會把原因秀在網頁上，我們才好抓蟲
+        return f"❌ Groq 診斷失敗：{str(e)[:50]}"
 
 # 執行初始化
 ai_engines = init_ai_engines()
