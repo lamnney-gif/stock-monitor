@@ -124,7 +124,7 @@ def get_google_news(keyword):
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
     if ai_engine:
         try:
-            time.sleep(2) 
+            time.sleep(10) 
             prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
             res = ai_engine.generate_content(prompt)
             return res.text
