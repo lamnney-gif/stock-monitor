@@ -9,9 +9,9 @@ from sklearn.linear_model import LinearRegression
 import time
 
 # 1. 頁面配置
-st.set_page_config(page_title="半導體大戶戰情室-數據全開版", layout="wide")
+st.set_page_config(page_title="半導體大戶戰情室-終極全功能版", layout="wide")
 
-# 2. CSS 樣式優化
+# 2. CSS 樣式 (確保 UI 不會跑版)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -22,7 +22,7 @@ st.markdown("""
     .💤 { background-color: #f5f5f5; border-left: 15px solid #8c8c8c; color: #262626; }
     .🔎 { background-color: #ffffff; border-left: 15px solid #1890ff; color: #003a8c; }
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.07); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
-    .defense-box { background: rgba(255, 255, 255, 0.7); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
+    .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .timer-container { text-align: right; color: #fa8c16; font-weight: bold; font-size: 1.1em; padding: 10px 20px; border: 1px solid #ffd591; border-radius: 10px; background: #fff7e6; }
     </style>
     """, unsafe_allow_html=True)
@@ -39,34 +39,37 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
+def get_google_news(keyword):
+    news = []
+    try:
+        url = f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:3]:
+            news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
+
 # 頂部抬頭
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("📊 半導體「大戶動向」深度數據戰情室")
+with col_t: st.title("🖥️ 半導體「大戶動向」全數據戰情室")
 with col_r: timer_placeholder = st.empty()
 
 data_list = []
 news_dict = {}
 
-with st.spinner('正在精準計算斜率、乖離與籌碼分佈...'):
+with st.spinner('數據重載中，正在精準校對防線與賣壓區...'):
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             if df.empty: continue
             
-            # --- 核心數據計算 ---
             close_val = df['Close'].iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
-            
-            # 支撐與壓力
             tech_support = ma20 - (2 * std20)
             tech_pressure = ma20 + (2 * std20)
-            
-            # 停利防線 (5日高點回落3%)
             stop_profit_line = df['High'].tail(5).max() * 0.97
-            
-            # 籌碼地板與建議買入
             chip_floor = get_volume_support(df)
             suggested_buy = (tech_support + chip_floor) / 2
             
@@ -75,7 +78,7 @@ with st.spinner('正在精準計算斜率、乖離與籌碼分佈...'):
             atr = high_low.rolling(14).mean().iloc[-1]
             sell_limit = close_val + (2.5 * atr) 
 
-            # 精準指標
+            # 指標計算
             bias = ((close_val - ma20) / ma20) * 100
             y_data = df['Close'].tail(10).values
             slope_pct = (LinearRegression().fit(np.arange(10).reshape(-1,1), y_data.reshape(-1,1)).coef_[0][0] / y_data.mean()) * 100
@@ -84,8 +87,9 @@ with st.spinner('正在精準計算斜率、乖離與籌碼分佈...'):
             info = stock.info
             pe_val = info.get('forwardPE', "N/A")
             inst_pct = info.get('heldPercentInstitutions', 0) * 100
+            insider_pct = info.get('heldPercentInsiders', 0) * 100
 
-            # --- 深度診斷邏輯 (恢復完整版) ---
+            # --- 完整診斷邏輯 ---
             if vol_ratio > 2.0 and abs(slope_pct) < 0.1 and close_val > ma20:
                 icon, style, status = "🚨", "🚨", f"🚨 【大戶倒貨】成交量爆出 {vol_ratio:.2f} 倍但股價幾乎不動 (斜率僅 {slope_pct:.2f}%)。這是典型的高檔換手或大戶出貨，極度危險，建議大幅減碼防禦。"
             elif close_val >= tech_pressure * 0.98:
@@ -103,9 +107,10 @@ with st.spinner('正在精準計算斜率、乖離與籌碼分佈...'):
                 "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
                 "buy": round(suggested_buy, 2), "sell": round(tech_pressure, 2), "stop_line": round(stop_profit_line, 2),
                 "sell_limit": round(sell_limit, 2), "pe": pe_val, "vol": round(vol_ratio, 2), 
-                "diag": status, "inst": f"{inst_pct:.1f}%", "tech_sup": round(tech_support, 2), 
-                "chip_floor": round(chip_floor, 2), "bias": round(bias, 2), "slope": round(slope_pct, 2)
+                "diag": status, "inst": f"{inst_pct:.1f}%", "insider": f"{insider_pct:.1f}%",
+                "tech_sup": round(tech_support, 2), "chip_floor": round(chip_floor, 2), "bias": round(bias, 2), "slope": round(slope_pct, 2)
             })
+            news_dict[name] = get_google_news(name)
         except: pass
 
 # --- UI 渲染 ---
@@ -115,50 +120,55 @@ for d in data_list:
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <span style="font-size: 1.7em; font-weight: bold;">{d['icon']} {d['name']}</span>
-                <span style="font-size: 2em; margin-left: 25px; font-family: monospace; color: #1f1f1f;">${d['price']}</span>
+                <span style="font-size: 2em; margin-left: 25px; font-family: monospace;">${d['price']}</span>
             </div>
             <div style="text-align: right;">
                 <span class="metric-tag">預估 PE: {d['pe']}</span>
-                <span class="metric-tag">法人持股: {d['inst']}</span>
+                <span class="metric-tag">法人: {d['inst']}</span>
+                <span class="metric-tag">大戶: {d['insider']}</span>
             </div>
         </div>
         
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            <b>即時數據指標：</b> 
-            乖離率: <span style="color:{'#cf1322' if d['bias']>0 else '#389e0d'};">{d['bias']}%</span> | 
-            成交量比: {d['vol']}x | 
-            趨勢斜率: {d['slope']}%
+            <b>即時指標：</b> 乖離: {d['bias']}% | 量比: {d['vol']}x | 斜率: {d['slope']}%
         </div>
 
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.5;">
-                <div style="font-size: 1.1em; line-height: 1.6; color: #262626;">
+                <div style="font-size: 1.1em; line-height: 1.6;">
                     <b>💡 戰情診斷報告：</b><br>{d['diag']}
                 </div>
                 <div class="defense-box">
-                    🛡️ <b>大戶防禦體系：</b> 
-                    <span style="color:#1890ff; font-weight:bold;">停利防線：{d['stop_line']}</span> (高點回落3%) | 
+                    🛡️ <b>核心防禦體系：</b> 
+                    <span style="color:#1890ff; font-weight:bold;">停利防線：{d['stop_line']}</span> | 
                     技術支撐：{d['tech_sup']} | 
                     籌碼地板：{d['chip_floor']}
                 </div>
             </div>
             <div style="flex: 1.2; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
-                <b>📊 核心操作位參考：</b><br>
+                <b>📊 核心操作位：</b><br>
                 <div style="margin-top: 8px;">
                     🟢 建議買入價：<span style="color:#389e0d; font-weight:bold;">{d['buy']}</span><br>
                     🎯 建議停利價：<span style="color:#d4380d; font-weight:bold;">{d['sell']}</span><br>
-                    🚫 <span style="color:#cf1322; font-weight:bold;">⚠️ 強利賣壓區：{d['sell_limit']}</span>
+                    🚫 <span style="color:#cf1322; font-weight:bold;">⚠️ 強力賣壓區：{d['sell_limit']}</span>
                 </div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
+# 側邊欄新聞區 (確保這個區塊存在，不然會報錯)
+st.sidebar.title("📰 即時產業情報")
+for name, news in news_dict.items():
+    if news:
+        with st.sidebar.expander(f"{name} 相關"):
+            for n in news: st.markdown(n)
+
 # 刷新邏輯
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"<div class='timer-container'>🔄 {i}s 後自動重載數據</div>", unsafe_allow_html=True)
+    timer_placeholder.markdown(f"<div class='timer-container'>🔄 {i}s 後自動刷新數據</div>", unsafe_allow_html=True)
     time.sleep(1)
 
 st.rerun()
