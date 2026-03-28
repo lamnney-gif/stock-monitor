@@ -144,7 +144,7 @@ with st.spinner('正在同步全球數據、籌碼、均線與 AI 評分中...')
     vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
     sox = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "BEAR"
+    sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
 
     for ticker, info in tickers.items():
         try:
@@ -205,8 +205,8 @@ with st.spinner('正在同步全球數據、籌碼、均線與 AI 評分中...')
             news_dict[name] = get_google_news(name)
         except: pass
 
-# --- UI 渲染 (1600px 全數據排列) ---
-st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f} ({'😱' if vix > 22 else '😊'})\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
+# --- UI 渲染 ---
+st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f} ({'😱' if vix > 22 else '😊'})\n- 10Y Yield: {us10y:.2f}%\n- **SOX 趨勢: {sox_status}**")
 st.sidebar.title("📰 即時情報")
 for name, news in news_dict.items():
     if news:
@@ -222,30 +222,31 @@ for d in data_list:
                 <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
             </div>
             <div style="text-align: right;">
+                <span class="ai-score" style="font-size: 1.2em; font-weight: bold; color: #1890ff; background: #e6f7ff; padding: 4px 10px; border-radius: 10px;">AI 確信度: {d['ai_score']}%</span><br>
                 <div style="margin-top:8px;">
-                    <span class="metric-tag adr-tag">ADR連動: {d['adr']}</span>
-                    <span class="metric-tag chip-tag">籌碼: {d['chip_flow']}</span>
+                    <span class="metric-tag">ADR: {d['adr']}</span>
+                    <span class="metric-tag">籌碼: {d['chip_flow']}</span>
                     <span class="metric-tag">PE: {d['pe']}</span>
                     <span class="metric-tag">RSI: {d['rsi']}</span>
                 </div>
             </div>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | <b>成交量比: {d['vol']}x</b> | 機構持有: {d['inst']}
+            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | <b>成交量比: {d['vol']}x</b> | 機構: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.2;">
-                <b>🧠 AI 智權診斷 (AI Insight)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
+                <b>🧠 AI 智權診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
                 <div class="defense-box">
-                    ⚙️ <b>風控參數模擬 (Risk Simulation)：</b> 
+                    ⚙️ <b>風控與成本模擬：</b> 
                     <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
                     <span style="color:#cf1322; font-weight:bold;">ATR 演算底線: {d['stop']}</span> <br>
                     <b>密集換手區間: {d['chip_floor']}</b> | 統計支撐下軌: {d['sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
-                <b>🧪 邏輯回測參數 (Params)：</b><br>
+                <b>🧪 邏輯回測參數：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div><span class="price-label">🟢 模型觀察點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 預計壓力位</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
