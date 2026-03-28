@@ -120,7 +120,7 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=3600) # 👈 AI 診斷一小時才更新一次，省額度
+@st.cache_data(ttl=14400) # 👈 AI 診斷一小時才更新一次，省額度
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
     if ai_engine:
         try:
@@ -166,7 +166,7 @@ tickers = {
     "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
     "TSM": {"name": "台積電ADR", "adr": None}, "MU": {"name": "美光", "adr": None},
     "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
-    "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}
+    "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}, "1303.TW": {"name": "南亞", "adr": None}
 }
 
 data_list, news_dict = [], {}
