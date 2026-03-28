@@ -9,26 +9,38 @@ from sklearn.linear_model import LinearRegression
 import time
 
 # 1. 頁面配置
-st.set_page_config(page_title="半導體大戶戰情室-超跌紫色版", layout="wide")
+st.set_page_config(page_title="半導體大戶戰情室-Beta Lab", layout="wide")
 
-# 2. CSS 樣式擴充 (加入紫色樣式)
+# 2. CSS 樣式 (包含警告框樣式)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .🚨 { background-color: #fff5f5; border-left: 12px solid #ff4d4f; color: #a8071a; } /* 超漲 */
-    .⚠️ { background-color: #fffbe6; border-left: 12px solid #ffc53d; color: #874d00; } /* 警示 */
-    .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } /* 買入 */
-    .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } /* 崩壞 */
-    .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; } /* 整理 */
-    .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } /* 超跌紫色 */
-    
+    .🚨 { background-color: #fff5f5; border-left: 12px solid #ff4d4f; color: #a8071a; } 
+    .⚠️ { background-color: #fffbe6; border-left: 12px solid #ffc53d; color: #874d00; } 
+    .✅ { background-color: #f6ffed; border-left: 12px solid #52c41a; color: #135200; } 
+    .☢️ { background-color: #fff1f0; border-left: 12px solid #f5222d; color: #820014; } 
+    .🔎 { background-color: #ffffff; border-left: 12px solid #1890ff; color: #003a8c; }
+    .🟣 { background-color: #f9f0ff; border-left: 12px solid #722ed1; color: #531dab; } 
     .metric-tag { display: inline-block; padding: 5px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-right: 12px; font-size: 0.9em; font-weight: 600; }
     .defense-box { background: rgba(255, 255, 255, 0.8); border: 1.5px dashed #434343; padding: 12px; border-radius: 10px; margin-top: 15px; font-size: 0.95em; }
     .price-label { font-size: 0.85em; color: #666; font-weight: bold; }
     .price-value { font-size: 1.1em; font-family: monospace; font-weight: bold; }
-    .timer-container { text-align: right; color: #fa8c16; font-weight: bold; font-size: 1.1em; padding: 10px 20px; border: 1px solid #ffd591; border-radius: 10px; background: #fff7e6; }
+    /* 免責聲明樣式 */
+    .disclaimer-box { background-color: #fafafa; border: 1px solid #d9d9d9; padding: 15px; border-radius: 8px; font-size: 0.85em; color: #595959; }
     </style>
     """, unsafe_allow_html=True)
+
+# --- 側邊欄：法律防護區 ---
+st.sidebar.error("⚠️ 【開發者自用測試區】")
+st.sidebar.markdown("""
+<div class="disclaimer-box">
+<b>【免責聲明】</b><br>
+1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+</div>
+""", unsafe_allow_html=True)
 
 tickers = {
     "NVDA": "輝達", "TSM": "台積電ADR", "MU": "美光", "000660.KS": "海力士", 
@@ -52,14 +64,14 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# 頂部抬頭
+# 標題加入 Lab 字眼
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 半導體大戶戰情室 - 邏輯全功能版")
+with col_t: st.title("🖥️ 半導體大戶戰情室 - Beta Lab (測試版)")
 with col_r: timer_placeholder = st.empty()
 
 data_list, news_dict = [], {}
 
-with st.spinner('同步全球數據中...'):
+with st.spinner('同步全球實驗數據中...'):
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
@@ -71,14 +83,12 @@ with st.spinner('同步全球數據中...'):
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             std20 = df['Close'].rolling(20).std().iloc[-1]
             
-            # 支撐/壓力/籌碼
             tech_support = ma20 - (2 * std20)
             tech_pressure = ma20 + (2 * std20)
             local_low_3d = df['Low'].tail(3).min()
             local_low_20d = df['Low'].tail(20).min()
             chip_floor = get_volume_support(df)
             
-            # 指標計算
             y_data = df['Close'].tail(10).values
             slope_pct = (LinearRegression().fit(np.arange(10).reshape(-1,1), y_data.reshape(-1,1)).coef_[0][0] / y_data.mean()) * 100
             bias = ((close_val - ma20) / ma20) * 100
@@ -88,7 +98,7 @@ with st.spinner('同步全球數據中...'):
             pe_val = info.get('forwardPE', "N/A")
             inst_pct = info.get('heldPercentInstitutions', 0) * 100
 
-            # --- 邏輯修正：買點不倒掛 ---
+            # 買點不倒掛邏輯
             if slope_pct > 0.6:
                 raw_buy = (ma10 * 0.7) + (tech_support * 0.3)
             else:
@@ -98,19 +108,17 @@ with st.spinner('同步全球數據中...'):
             stop_loss = min(local_low_20d, suggested_buy) * 0.95
             stop_profit_line = df['High'].tail(5).max() * 0.97
 
-            # --- 診斷報告 (優先權順序) ---
-            if bias < -12: # 超跌紫色優先
-                icon, style, status = "🟣", "🟣", f"🟣 【極度超跌】負乖離率達 {bias:.1f}%。股價偏離常軌，技術性反彈機率高，不建議在此殺低。"
+            # 診斷報告
+            if bias < -12:
+                icon, style, status = "🟣", "🟣", f"🟣 【極度超跌】負乖離率達 {bias:.1f}%。程式判斷偏離常軌，僅供技術反彈邏輯測試。"
             elif close_val < stop_loss:
-                icon, style, status = "☢️", "☢️", f"☢️ 【支撐瓦解】跌破絕對停損線 {stop_loss:.2f}。趨勢全面轉空，嚴禁接刀。"
+                icon, style, status = "☢️", "☢️", f"☢️ 【支撐瓦解】破防線。下殺斜率 {slope_pct:.2f}%，目前非實驗建議觀察區。"
             elif bias > 20:
-                icon, style, status = "🚨", "🚨", f"🚨 【嚴重超漲】乖離率 {bias:.1f}%。目前是幫人抬轎區，等回測 {suggested_buy:.2f}。"
-            elif slope_pct < -0.2 and close_val < tech_support:
-                icon, style, status = "⚠️", "⚠️", f"⚠️ 【空頭修正】原技術支撐已失效。建議觀察點下移至 {suggested_buy:.2f}。"
+                icon, style, status = "🚨", "🚨", f"🚨 【嚴重超漲】乖離過高。目前處於過熱區，等回測 {suggested_buy:.2f} 測試點。"
             elif close_val <= suggested_buy * 1.03 and slope_pct > -0.15:
-                icon, style, status = "✅", "✅", f"✅ 【買入訊號】回測支撐區且斜率走平，適合分批佈局。"
+                icon, style, status = "✅", "✅", f"✅ 【模型訊號】符合回測支撐邏輯，進入實驗布局觀察位。"
             else:
-                icon, style, status = "🔎", "🔎", f"🔎 【區間整理】股價在支撐與壓力之間震盪尋找方向。"
+                icon, style, status = "🔎", "🔎", f"🔎 【區間整理】程式觀測中，股價於支撐與壓力區間尋求平衡。"
 
             data_list.append({
                 "icon": icon, "style": style, "name": f"{name} ({ticker})", "price": round(close_val, 2),
@@ -136,25 +144,22 @@ for d in data_list:
                 <span class="metric-tag">法人: {d['inst']}</span>
             </div>
         </div>
-        <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            斜率: {d['slope']}% | 乖離率: {d['bias']}% | 成交量比: {d['vol']}x
-        </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.2;">
-                <b>💡 戰術診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
+                <b>💡 程式實驗診斷：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['diag']}</span>
                 <div class="defense-box">
-                    🛡️ <b>防禦體系：</b> 
+                    🛡️ <b>防禦測試位：</b> 
                     <span style="color:#1890ff;">短期停利參考: {d['stop_line']}</span> | 
                     <span style="color:#cf1322; font-weight:bold;">絕對停損: {d['stop_loss']}</span> <br>
                     歷史籌碼地板: {d['chip_floor']} | 布林支撐底線: {d['tech_sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
-                <b>📊 核心參考價位：</b><br>
+                <b>📊 邏輯參考價位：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div><span class="price-label">🟢 建議買入</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
-                    <div><span class="price-label">🎯 預期停利</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
+                    <div><span class="price-label">🟢 實驗買入點</span><br><span class="price-value" style="color:#389e0d; font-size:1.3em;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 實驗停利點</span><br><span class="price-value" style="color:#cf1322; font-size:1.3em;">{d['sell']}</span></div>
                     <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
                     <div><span class="price-label">📉 波段支撐</span><br><span class="price-value">{d['tech_sup']}</span></div>
                     <div><span class="price-label">📈 波段壓力</span><br><span class="price-value">{d['tech_pre']}</span></div>
@@ -165,7 +170,7 @@ for d in data_list:
     """, unsafe_allow_html=True)
 
 # 側邊欄新聞
-st.sidebar.title("📰 即時情報推播")
+st.sidebar.title("📰 測試標的新聞")
 for name, news in news_dict.items():
     if news:
         with st.sidebar.expander(f"{name}"):
@@ -173,6 +178,6 @@ for name, news in news_dict.items():
 
 # 刷新
 for i in range(60, 0, -1):
-    timer_placeholder.markdown(f"<div class='timer-container'>🔄 {i}s 後自動重載數據</div>", unsafe_allow_html=True)
+    timer_placeholder.markdown(f"🔄 {i}s 後刷新數據")
     time.sleep(1)
 st.rerun()
