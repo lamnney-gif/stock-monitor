@@ -146,7 +146,7 @@ def get_google_news(keyword):
 
 @st.cache_data(ttl=14400) # AI 診斷12小時更新一次
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
-    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。還有現在全球局勢的影響，請給出80字內精闢診斷和未來動向。"
+    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。還有分析有沒有可能被全球局勢和市場影響導致，請給出80字內精闢診斷和未來動向。"
     
     # 優先嘗試 Groq (因為剛才測試最穩)
     if ai_engines["groq"]:
