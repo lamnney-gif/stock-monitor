@@ -133,7 +133,7 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400) # AI 診斷12小時更新一次
+@st.cache_data(ttl=14400) # AI 診斷4小時更新一次
 def get_ai_analysis(name, price, rsi, chip_flow, trend):
     prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。還有參考現在全球局勢相關消息加入分析，請給出80字內精闢診斷和未來趨勢。"
     
