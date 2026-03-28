@@ -59,11 +59,11 @@ st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
     <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
-    <b>【免責聲明】</b><br>
-    1. 本網頁為個人 <b>Python 量化測試</b>用途。<br><br>
-    2. 內文診斷報告皆為<b>演算法實驗產出</b>，非投資建議。<br><br>
-    3. <b>盈虧自負</b>，開發者不承擔法律責任。<br><br>
-    4. 數據或有延遲，請以官方報價為準。
+<b>【免責聲明】</b><br>
+    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+    2. 內文所載之所有價格、買賣建議、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -71,10 +71,9 @@ st.sidebar.markdown("""
 # --- 主頁面置頂警告 (手機版強制顯示) ---
 st.markdown("""
 <div class="mobile-warning">
-    <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
-    <p style="font-size: 0.9em; color: #595959; margin-top: 5px; margin-bottom: 0;">
-    本站僅供個人程式邏輯測試。所有數據均為<b>自動化實驗產出</b>。
-    閱覽者據此操作之<b>盈虧請自行承擔</b>。
+<b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境</b><br>
+    本站僅供 Python 程式邏輯測試（Beta Lab），內文建議與價格均為演算法實驗產出。
+    <b>閱覽者據此操作之盈虧請自行承擔</b>。
     </p>
 </div>
 """, unsafe_allow_html=True)
