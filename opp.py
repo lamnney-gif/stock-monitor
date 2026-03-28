@@ -146,9 +146,14 @@ def get_google_news(keyword):
 
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, ticker, price, rsi, chip_flow, trend, chip_floor, tech_press, vix, sox_status, pe, rev):
-    # 這是你剛才寫的專業版 Prompt
-    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。請給出80字內精闢診斷。"
-    
+    # 1. 構建專業版 Prompt (確保這行前面有 4 個空格)
+    prompt = f"""你是資深半導體分析師。分析{name}({ticker})：
+1. 數據：現價{price}, 本益比{pe}, 營收年增{rev}%, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。
+2. 關鍵位：支撐{chip_floor}, 壓力{tech_press}。
+3. 外部環境：VIX{vix:.1f}, 費半{sox_status}。
+請結合最新新聞，給出80字內精闢診斷、具體支撐/壓力建議及未來一週動向。"""
+
+    # 2. 呼叫 AI 引擎 (確保 if 與 prompt 對齊)
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
@@ -157,15 +162,17 @@ def get_ai_analysis(name, ticker, price, rsi, chip_flow, trend, chip_floor, tech
                 max_tokens=200
             )
             return completion.choices[0].message.content
-        except: pass
+        except Exception as e:
+            pass # 如果 Groq 失敗，嘗試下一個
             
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
             return res.text
-        except: return "⚠️ AI 引擎暫時忙碌中"
+        except Exception as e:
+            return f"⚠️ AI 引擎暫時忙碌中 ({str(e)[:20]})"
             
-    return "❌ AI 未啟動"
+    return "❌ AI 未啟動 (請檢查 Secrets)"
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
