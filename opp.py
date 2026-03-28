@@ -196,7 +196,7 @@ def get_google_news(keyword):
     except: pass
     return news
 
-def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
+def calculate_ai_confidence(d, vix, sox_status, week_trend, name, ticker, tech_press):
     score = 0
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
@@ -207,27 +207,21 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    # 🟢 修正點：從字典 d 中取出 pe 和 rev_growth 傳給 AI
-ai_report = get_ai_analysis(
-        name, 
-        ticker, 
-        d['price'], 
-        d['rsi'], 
-        d['chip_flow'], 
-        d['trend'], 
-        d['chip_floor'], # 👈 記得要在字典裡傳入這個
-        tech_press, 
-        vix, 
-        sox_status, 
-        d.get('pe', 'N/A'), 
-        d.get('rev_growth', 0)
+    # 確保這一行前面是 4 個空格
+    ai_report = get_ai_analysis(
+        name, ticker, d['price'], d['rsi'], d['chip_flow'], d['trend'], 
+        d['chip_floor'], tech_press, vix, sox_status, d.get('pe', 'N/A'), d.get('rev_growth', 0)
     )
     
-    if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
-    elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
-    elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
-    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
-
+    # 確保 if 與上面的 ai_report 對齊（同樣是 4 個空格）
+    if score >= 85: 
+        return score, f"✅ 【強力進攻】{ai_report}", "✅"
+    elif score >= 65: 
+        return score, f"🔎 【分批佈局】{ai_report}", "✅"
+    elif score >= 45: 
+        return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
+    else: 
+        return score, f"☢️ 【全面避險】{ai_report}", "☢️"
 # 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
 with col_t: st.title("🖥️ 測試 全數據 AI 版")
