@@ -100,7 +100,7 @@ with col_r: timer_placeholder = st.empty()
 # 標的清單與 ADR 對應
 tickers = {
     "NVDA": {"name": "輝達", "adr": None},
-    "2330.TW": {"name": "台積電", "adr": None},
+    "2330.TW": {"name": "台積電", "adr": "TSM"},
     "MU": {"name": "美光", "adr": None},
     "000660.KS": {"name": "海力士", "adr": None},
     "2303.TW": {"name": "聯電", "adr": "UMC"},
