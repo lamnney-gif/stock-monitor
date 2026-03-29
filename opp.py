@@ -170,7 +170,7 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
     elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
-    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️""
+    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
 
 # 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
