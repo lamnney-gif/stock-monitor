@@ -9,6 +9,7 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
+import requests
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
@@ -124,12 +125,31 @@ def get_volume_support(df):
     except: return 0
 
 def get_google_news(keyword):
+    """這就是你的 2026 全時域雷達眼睛"""
     news = []
+    now = datetime.now()
+    year = now.year
+    month = now.month
+    
+    # 1. 自動切換戰略關鍵字 (5 月會自動搜財報)
+    strategy = "財報 OR 展望 OR 季報" if month in [4, 5, 8, 11] else "擴產 OR 漲價 OR 併購"
+    
+    # 2. 組合核心搜尋詞 (加入年份避免抓到 10 年前的新聞)
+    query_str = quote(f"{keyword} ({strategy} OR HBM) {year}")
+    
+    # 3. 注入 Google 隱藏參數 'tbs=qdr:d' (強制只搜過去 24 小時)
+    # 這是解決「新聞不夠新」最關鍵的一招！
+    url = f"https://news.google.com/rss/search?q={query_str}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
+    
     try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
-    except: pass
-    return news
+        feed = feedparser.parse(url)
+        # 4. 只取最精華的前 3 則，並過濾掉重複標題
+        for entry in feed.entries[:3]:
+            news.append(f"• [{entry.title}]({entry.link})")
+    except Exception as e:
+        print(f"搜尋雷達故障: {e}")
+        
+    return news if news else ["⚠️ 過去 24H 暫無重大突破性消息"]
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
