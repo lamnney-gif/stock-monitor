@@ -133,54 +133,26 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400) # AI 診斷4小時更新一次
-def get_ai_analysis(name, price, rsi, chip_flow, trend):
-    prompt = f"你是量化分析師，分析{name}：現價{price}, RSI{rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}。還有參考現在全球局勢相關消息加入分析，請給出80字內精闢診斷和未來趨勢。"
+@st.cache_data(ttl=14400)
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+    prompt = (f"你是資深半導體分析師，請分析{name}：現價{price}, RSI {rsi:.1f}, 籌碼{chip_flow}, "
+              f"趨勢{trend}, 本益比{pe}, 營收成長{rev}。請結合全球半導體景氣，給出80字內精闢診斷與支撐壓力建議。")
     
-    # 優先嘗試 Groq (因為剛才測試最穩)
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=200
+                max_tokens=250
             )
-            return " (Groq 備援) " + completion.choices[0].message.content
-        except:
-            pass
-            
-    # 備援嘗試 Gemini
+            return completion.choices[0].message.content
+        except: pass
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
             return res.text
-        except:
-            return "⚠️ AI 引擎暫時忙碌中"
-            
-    return "❌ AI 未啟動 (請檢查 Secrets)"
-
-def get_institutional_flow(df):
-    recent = df.tail(5)
-    flow_score = 0
-    for i in range(1, len(recent)):
-        if recent['Close'].iloc[i] > recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score += 1
-        if recent['Close'].iloc[i] < recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score -= 1
-    return "🔥 強勢買入" if flow_score >= 2 else "💧 持續流出" if flow_score <= -2 else "☁️ 盤整觀望"
-
-def get_volume_support(df):
-    try:
-        recent_df = df.tail(60)
-        v_hist = np.histogram(recent_df['Close'], bins=10, weights=recent_df['Volume'])
-        return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
-    except: return 0
-
-def get_google_news(keyword):
-    news = []
-    try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
-    except: pass
-    return news
+        except: return "⚠️ AI 引擎暫時忙碌中"
+    return "❌ AI 未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
@@ -193,12 +165,12 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'])
+    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'])
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
     elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
-    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
+    else: return score, f"☢️ 【全面避險】{ai_report}", "☢️""
 
 # 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
@@ -220,55 +192,62 @@ with st.spinner('同步數據與 AI 運算中...'):
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
 
-    for ticker, info in tickers.items():
+       for ticker, info in tickers.items():
         try:
             stock = yf.Ticker(ticker)
+            s_info = stock.info
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
             
             close_val = df['Close'].iloc[-1]
-            ma20 = df['Close'].rolling(20).mean().iloc[-1]
-            std20 = df['Close'].rolling(20).std().iloc[-1]
+            ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # RSI & ATR
+            # 基本面數據
+            pe_val = s_info.get('trailingPE', 0)
+            rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
+            
+            # 技術指標
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
             rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
             atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
             
-            # 趨勢、乖離、籌碼
             chip_flow = get_institutional_flow(df)
             ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
             trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
             bias = ((close_val - ma20) / ma20) * 100
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # 關鍵防線數據
+            # 風控數據
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
+            # AI 診斷
+            pe_str = f"{pe_val:.1f}" if pe_val else "N/A"
+            rev_str = f"{rev_growth:.1f}%"
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val},
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
-                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), 
+                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
                 "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
                 "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
-                "inst": f"{stock.info.get('heldPercentInstitutions', 0)*100:.1f}%",
+                "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
                 "chip_flow": chip_flow, "trend": trend_label
             })
             news_dict[info['name']] = get_google_news(info['name'])
-        except: pass
+        except Exception as e:
+            st.warning(f"跳過 {ticker}: {e}")
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
@@ -287,7 +266,7 @@ for d in data_list:
             <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | 斜率: {d['slope']}% | 乖離率: {d['bias']}% | 機構: {d['inst']}
+            趨勢: {d['trend']} | <b style="color:#003a8c;">本益比: {d['pe']}</b> | <b style="color:#096dd9;">營收成長: {d['rev']}</b> | 乖離率: {d['bias']}% | 機構: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
