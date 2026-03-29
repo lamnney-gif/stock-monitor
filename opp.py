@@ -270,13 +270,27 @@ with st.spinner('同步數據與 AI 運算中...'):
             )
 
             data_list.append({
-                "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
-                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
-                "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
-                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
+                "style": ai_style, 
+                "icon": ai_style, 
+                "name": f"{info['name']} ({ticker})", 
+                "price": round(close_val, 2),
+                "ai_diag": ai_diag, 
+                "buy": round(suggested_buy, 2), 
+                "sell": round(tech_pre, 2), 
+                "pe": pe_str, "rev": rev_str,
+                "stop": round(dynamic_stop, 2), 
+                "stop_line": round(stop_profit_line, 2), 
+                "chip_floor": round(chip_floor, 2),
+                "rsi": round(rsi_val, 1), 
+                "vol": round(vol_ratio, 1), 
+                "slope": round(slope, 2),
+                "bias": round(bias, 2), 
+                "sup": round(tech_sup, 2), 
+                "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label
+                "chip_flow": chip_flow, 
+                "trend": trend_label,
+                "news": current_news
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
