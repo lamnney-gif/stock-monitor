@@ -9,7 +9,6 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
-import requests
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
@@ -134,24 +133,32 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400, show_spinner=False)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_tuple):
-    # 重點：參數裡的 news_list 改成 news_tuple，因為 tuple 才能被快取
-    news_context = " | ".join(news_tuple) if news_tuple else "暫無即時重大新聞"
+@st.cache_data(ttl=14400)
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
+    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     
     prompt = f"""
     你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
+    
+    【1. 即時政經與外部衝突】
     市場現狀：{news_context}
-    個股指標：現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi} | 籌碼:{chip_flow} | 趨勢:{trend}
+    請自行識別當前的核心驅動力(如地緣政治開戰、油價飆升、AI需求轉折)。
+    分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
+
+    【2. 個股估值與技術面】
+    現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
+    
+    【3. 操作核心建議】
+    結合政經變數，判斷目前是「溢價合理」還是「黑天鵝預警」。
+    給出具體的實戰部署（如：回測加碼、高檔利了結、現金為王）。
     語氣專業冷靜，限制在 130 字內。
     """
     
-    # 這裡的 Groq/Gemini 邏輯保持不變...
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位資深策略家。"},
+                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
                           {"role": "user", "content": prompt}]
             )
             return "🔥 策略室： " + completion.choices[0].message.content
