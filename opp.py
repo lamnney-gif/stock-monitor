@@ -123,45 +123,17 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-from datetime import datetime, timedelta
-import time
-
 def get_google_news(keyword):
-    """手動過濾：只保留真正 24 小時內的新聞"""
     news = []
     try:
-        # 1. 一樣帶著參數去要資料
-        query = quote(f"{keyword} 股價")
-        url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
-        feed = feedparser.parse(url)
-        
-        # 取得現在時間 (UTC)
-        now = datetime.utcnow()
-        
-        for entry in feed.entries:
-            # 2. 解析這條新聞的發布時間
-            # entry.published_parsed 是一個時間元組 (struct_time)
-            if hasattr(entry, 'published_parsed'):
-                pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-                
-                # 3. 計算時差：如果超過 72 小時就跳過
-                if now - pub_time > timedelta(hours=72):
-                    continue 
-            
-            # 4. 符合條件才加入清單
-            clean_title = entry.title.split(" - ")[0]
-            news.append(f"• [{clean_title}]({entry.link})")
-            
-            # 5. 湊滿 3 則就收工，避免側邊欄太擠
-            if len(news) >= 3:
-                break
-                
-    except Exception as e:
-        print(f"新聞過濾失敗: {e}")
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
     return news
+
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400, show_spinner=False)
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     
@@ -224,15 +196,10 @@ with col_t: st.title("🖥️ 測試 全數據 AI 版")
 with col_r: timer_placeholder = st.empty()
 
 tickers = {
-    "2330.TW": {"name": "台積電", "adr": "TSM"}, 
-    "NVDA": {"name": "輝達", "adr": None},
-    "MU": {"name": "美光", "adr": None}, 
-    "000660.KS": {"name": "海力士", "adr": None},
-    "2303.TW": {"name": "聯電", "adr": "UMC"}, 
-    "6770.TW": {"name": "力積電", "adr": None},
-    "2344.TW": {"name": "華邦電", "adr": None}, 
-    "3481.TW": {"name": "群創", "adr": None}, 
-    "1303.TW": {"name": "南亞", "adr": None}
+    "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
+    "MU": {"name": "美光", "adr": None}, "000660.KS": {"name": "海力士", "adr": None},
+    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
+    "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}, "1303.TW": {"name": "南亞", "adr": None}
 }
 
 data_list, news_dict = [], {}
@@ -248,9 +215,6 @@ with st.spinner('同步數據與 AI 運算中...'):
             # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
             current_news = get_google_news(info['name'])
             news_dict[info['name']] = current_news
-            
-            # 呼叫 AI 前先等一下，避開 RPM 限制
-            time.sleep(1.5) # 👈 給 Groq 一點時間準備下一則請求
 
             # B. 抓取行情數據
             stock = yf.Ticker(ticker)
@@ -296,27 +260,13 @@ with st.spinner('同步數據與 AI 運算中...'):
             )
 
             data_list.append({
-                "style": ai_style, 
-                "icon": ai_style, 
-                "name": f"{info['name']} ({ticker})", 
-                "price": round(close_val, 2),
-                "ai_diag": ai_diag, 
-                "buy": round(suggested_buy, 2), 
-                "sell": round(tech_pre, 2), 
-                "pe": pe_str, "rev": rev_str,
-                "stop": round(dynamic_stop, 2), 
-                "stop_line": round(stop_profit_line, 2), 
-                "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), 
-                "vol": round(vol_ratio, 1), 
-                "slope": round(slope, 2),
-                "bias": round(bias, 2), 
-                "sup": round(tech_sup, 2), 
-                "pre": round(tech_pre, 2),
+                "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
+                "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
+                "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
+                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, 
-                "trend": trend_label,
-                "news": current_news
+                "chip_flow": chip_flow, "trend": trend_label
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
