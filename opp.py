@@ -138,7 +138,7 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     
     prompt = f"""
-    你現在是高盛(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行穿透式診斷。
+    你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
     
     【1. 即時政經與外部衝突】
     市場現狀：{news_context}
