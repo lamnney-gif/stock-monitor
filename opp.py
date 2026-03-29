@@ -296,15 +296,15 @@ for d in data_list:
                 <b>🧠 智權診斷 (AI 版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
                 <div class="defense-box">
                     ⚙️ <b>風控與成本模擬：</b> 
-                    <span style="color:#1890ff;">波段高點預警: {d['stop_line']}</span> | 
-                    <span style="color:#cf1322; font-weight:bold;">ATR 底線: {d['stop']}</span> <br>
-                    <b>密集換手區間: {d['chip_floor']}</b> | 統計支撐: {d['sup']}
+                    <span style="color:#1890ff;">營利防守觀察點: {d['stop_line']}</span> | 
+                    <span style="color:#cf1322; font-weight:bold;">ATR底線(地板): {d['stop']}</span> <br>
+                    <b>密集換手區間(大部份交易點): {d['chip_floor']}</b> | 統計支撐: {d['sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
                 <b>🧪 邏輯回測參數：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div><span class="price-label">🟢 觀察點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
+                    <div><span class="price-label">🟢 觀察買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
                     <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
                     <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
