@@ -124,32 +124,27 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-def get_google_news(keyword):
-    """這就是你的 2026 全時域雷達眼睛"""
-    news = []
+# --- 這裡定義搜尋雷達的功能 ---
+def get_strategic_news_radar(keyword):
     now = datetime.now()
-    year = now.year
-    month = now.month
+    year, month = now.year, now.month
     
-    # 1. 自動切換戰略關鍵字 (5 月會自動搜財報)
-    strategy = "財報 OR 展望 OR 季報" if month in [4, 5, 8, 11] else "擴產 OR 漲價 OR 併購"
+    # 擴張搜尋範圍：加入 337調查、禁令、海力士等關鍵字，抓出你關心的 337 新聞
+    sector_threats = "OR 337調查 OR 禁令 OR 鎧俠 OR 海力士 OR HBM"
+    time_strategy = "OR 財報 OR 展望" if month in [4, 5, 8, 11] else "OR 擴產 OR 報價"
     
-    # 2. 組合核心搜尋詞 (加入年份避免抓到 10 年前的新聞)
-    query_str = quote(f"{keyword} ({strategy} OR HBM) {year}")
+    query = quote(f"{keyword} ({sector_threats} {time_strategy}) {year}")
+    # tbs=qdr:d 是關鍵：強制只搜過去 24 小時
+    url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
     
-    # 3. 注入 Google 隱藏參數 'tbs=qdr:d' (強制只搜過去 24 小時)
-    # 這是解決「新聞不夠新」最關鍵的一招！
-    url = f"https://news.google.com/rss/search?q={query_str}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
-    
+    news_titles = []
     try:
         feed = feedparser.parse(url)
-        # 4. 只取最精華的前 12 則，並過濾掉重複標題
-        for entry in feed.entries[:12]:
-            news.append(f"• [{entry.title}]({entry.link})")
-    except Exception as e:
-        print(f"搜尋雷達故障: {e}")
-        
-    return news if news else ["⚠️ 過去 24H 暫無重大突破性消息"]
+        for entry in feed.entries[:12]: # 抓 12 則給跑馬燈跑
+            news_titles.append(f"🔥 {entry.title}")
+    except:
+        pass
+    return news_titles
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
