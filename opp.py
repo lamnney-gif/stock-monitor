@@ -9,7 +9,6 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
-import requests
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
@@ -124,27 +123,13 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# --- 這裡定義搜尋雷達的功能 ---
-def get_strategic_news_radar(keyword):
-    now = datetime.now()
-    year, month = now.year, now.month
-    
-    # 擴張搜尋範圍：加入 337調查、禁令、海力士等關鍵字，抓出你關心的 337 新聞
-    sector_threats = "OR 337調查 OR 禁令 OR 鎧俠 OR 海力士 OR HBM"
-    time_strategy = "OR 財報 OR 展望" if month in [4, 5, 8, 11] else "OR 擴產 OR 報價"
-    
-    query = quote(f"{keyword} ({sector_threats} {time_strategy}) {year}")
-    # tbs=qdr:d 是關鍵：強制只搜過去 24 小時
-    url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
-    
-    news_titles = []
+def get_google_news(keyword):
+    news = []
     try:
-        feed = feedparser.parse(url)
-        for entry in feed.entries[:12]: # 抓 12 則給跑馬燈跑
-            news_titles.append(f"🔥 {entry.title}")
-    except:
-        pass
-    return news_titles
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
@@ -285,20 +270,6 @@ with st.spinner('同步數據與 AI 運算中...'):
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
-            
-            # 3. 抓取「廣角新聞」 (雷達偵測：337調查、禁令、財報)
-        news_radar = get_strategic_news_radar(tickers[tk])
-        
-        # --- 【關鍵：跑馬燈放在卡片上方】 ---
-        if news_radar:
-            marquee_content = " &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; ".join(news_radar)
-            st.markdown(f"""
-                <div class="marquee-container">
-                    <div class="marquee-text">{marquee_content}</div>
-                </div>
-            """, unsafe_allow_html=True)
-        # --- 【結束：跑馬燈顯示區】 ---
-
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
@@ -348,4 +319,3 @@ for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
     time.sleep(1)
 st.rerun()
-
