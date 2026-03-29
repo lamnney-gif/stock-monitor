@@ -183,16 +183,7 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     if d['rsi'] > 75: score -= 20
 
     # 傳入新聞進行深度分析
-    ai_report = get_ai_analysis(
-        name, 
-        round(price, 1), 
-        round(rsi, 1), 
-        chip_flow, 
-        trend, 
-        pe, 
-        rev, 
-        news # 這裡必須把 list 轉成 tuple，因為 Cache 不支援 list
-    )
+    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
