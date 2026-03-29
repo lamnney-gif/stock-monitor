@@ -204,60 +204,66 @@ with st.spinner('同步數據與 AI 運算中...'):
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
 
-    for ticker, info in tickers.items():
+for ticker, info in tickers.items():
         try:
+            # 1. 先抓取基礎資料與新聞 (這一步最重要，要先有新聞才能給 AI)
             stock = yf.Ticker(ticker)
             s_info = stock.info
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
+            
             if df.empty: continue
             
+            # 抓取該個股的最新新聞 (這就是 AI 的政經嗅覺來源)
+            current_news = get_google_news(info['name'])
+            news_dict[info['name']] = current_news 
+
+            # 2. 計算技術指標
             close_val = df['Close'].iloc[-1]
-            ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
+            ma20 = df['Close'].rolling(20).mean().iloc[-1]
+            std20 = df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # 基本面數據
+            # 3. 抓取基本面
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
             
-            # 技術指標
-            delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
-            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
-            
+            # 4. 趨勢與籌碼分析
             chip_flow = get_institutional_flow(df)
             ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
             trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
             bias = ((close_val - ma20) / ma20) * 100
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # 風控數據
+            # 5. 風控數據
+            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
-            # AI 診斷
+            # 6. AI 綜合診斷 (傳入新聞 current_news)
             pe_str = f"{pe_val:.1f}" if pe_val else "N/A"
             rev_str = f"{rev_growth:.1f}%"
+            
+            # 注意：這裡要確保你的 calculate_ai_confidence 函數有接收第 6 個參數
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
-                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name'],current_news
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': 50, 'pe': pe_str, 'rev': rev_str},
+                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", 
+                info['name'],
+                current_news  # <--- 傳入新聞
             )
 
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
                 "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
+                "rsi": 50, "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
                 "chip_flow": chip_flow, "trend": trend_label
             })
-            news_dict[info['name']] = get_google_news(info['name'])
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
 
