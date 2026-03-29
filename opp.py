@@ -132,39 +132,52 @@ def get_google_news(keyword):
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
-@st.cache_data(ttl=3600) # 縮短快取到 1 小時，確保即時政經消息能更新
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
-    # 將新聞清單轉為純文字
-    news_text = " | ".join(news_list) if news_list else "暫無即時新聞"
-    
+
+@st.cache_data(ttl=14400)
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+    # 這裡升級為「首席分析師」邏輯
     prompt = f"""
-    任務：你是高盛(Goldman Sachs)全球策略分析師。
+    你現在是高盛半導體首席分析師。請針對 {name} 進行深度診斷：
     
-    【當前宏觀與個股背景】
-    - 標的: {name} | 現價: {price} | PE: {pe} | 營收成長: {rev}
-    - 即時政經焦點：{news_text}
-    - 技術指標：RSI {rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}
-    
-    【專業診斷要求】
-    1. 自行識別當前公司產業的「核心驅動力」（例如當前年份的主流產品、缺貨題材或技術轉折點）。
-    2. 判斷「即時政經焦點」(如地緣政治、油價、戰爭) 對該產業的具體衝擊路徑（例如：油價漲導致成本升、避險資金流向、物流中斷）。
-    3. 結合技術面，分析目前股價是否已反應(Priced-in) 這些不確定因素。
-    4. 給出針對「下週」的實戰部署建議（如：反彈減碼、分批承接、或現金為王）。
-    5. 語氣要毒辣、直覺、專業，不超過 130 字。
+    【當前數據環境】
+    - 市場價格: {price}
+    - 估值水平 (PE): {pe}
+    - 成長力道 (Rev Growth): {rev}
+    - 技術強弱 (RSI): {rsi:.1f}
+    - 資金流向: {chip_flow}
+    - 均線架構: {trend}
+
+    【分析要求】
+    1. 結合當前 AI 伺服器需求與半導體週期（如 HBM 缺貨、成熟製程競爭）。
+    2. 若 PE 顯著高於同行，請指出是「溢價成長」還是「估值過熱」。
+    3. 診斷必須包含一個「操作核心建議」（如：空手等待、支撐位加碼、高檔利了結）。
+    4. 語氣要極度專業、精煉，限制在 120 字內。
+    5. 不要給出空泛的「投資有風險」，直接切入市場核心邏輯。
     """
     
+    # 優先使用 Llama 3.3 70B (推論能力強)，備援 Gemini 2.0 Flash
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的頂尖專家。"},
-                          {"role": "user", "content": prompt}]
+                messages=[
+                    {"role": "system", "content": "你是一位說話精準、見解毒辣的華爾街半導體資深分析師。"},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.5, # 降低隨機性，增加專業度
+                max_tokens=300
             )
-            return "🔥 實戰策略： " + completion.choices[0].message.content
+            return "💎 首席室： " + completion.choices[0].message.content
         except: pass
-    
-    # 備援 Gemini 邏輯... (略)
-    return "⚠️ 策略分析中..."
+        
+    if ai_engines["gemini"]:
+        try:
+            res = ai_engines["gemini"].generate_content(prompt)
+            return "🔮 戰略部： " + res.text
+        except:
+            return "⚠️ 分析師會議中 (API 忙碌)"
+            
+    return "❌ 分析引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
@@ -204,66 +217,60 @@ with st.spinner('同步數據與 AI 運算中...'):
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
 
-for ticker, info in tickers.items():
+    for ticker, info in tickers.items():
         try:
-            # 1. 先抓取基礎資料與新聞 (這一步最重要，要先有新聞才能給 AI)
             stock = yf.Ticker(ticker)
             s_info = stock.info
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
-            
             if df.empty: continue
             
-            # 抓取該個股的最新新聞 (這就是 AI 的政經嗅覺來源)
-            current_news = get_google_news(info['name'])
-            news_dict[info['name']] = current_news 
-
-            # 2. 計算技術指標
             close_val = df['Close'].iloc[-1]
-            ma20 = df['Close'].rolling(20).mean().iloc[-1]
-            std20 = df['Close'].rolling(20).std().iloc[-1]
+            ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # 3. 抓取基本面
+            # 基本面數據
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
             
-            # 4. 趨勢與籌碼分析
+            # 技術指標
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
+            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
+            
             chip_flow = get_institutional_flow(df)
             ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
             trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
             bias = ((close_val - ma20) / ma20) * 100
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # 5. 風控數據
-            atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
+            # 風控數據
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
-            # 6. AI 綜合診斷 (傳入新聞 current_news)
+            # AI 診斷
             pe_str = f"{pe_val:.1f}" if pe_val else "N/A"
             rev_str = f"{rev_growth:.1f}%"
-            
-            # 注意：這裡要確保你的 calculate_ai_confidence 函數有接收第 6 個參數
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': 50, 'pe': pe_str, 'rev': rev_str},
-                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", 
-                info['name'],
-                current_news  # <--- 傳入新聞
+                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
+                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
 
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
                 "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": 50, "vol": round(vol_ratio, 1), "slope": round(slope, 2),
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
                 "chip_flow": chip_flow, "trend": trend_label
             })
+            news_dict[info['name']] = get_google_news(info['name'])
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
 
@@ -315,3 +322,4 @@ for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
     time.sleep(1)
 st.rerun()
+
