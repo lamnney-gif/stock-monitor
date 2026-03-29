@@ -192,7 +192,7 @@ with st.spinner('同步數據與 AI 運算中...'):
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
 
-       for ticker, info in tickers.items():
+    for ticker, info in tickers.items():
         try:
             stock = yf.Ticker(ticker)
             s_info = stock.info
