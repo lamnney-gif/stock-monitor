@@ -135,24 +135,49 @@ def get_google_news(keyword):
 
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
-    prompt = (f"你是資深半導體分析師，請分析{name}：現價{price}, RSI {rsi:.1f}, 籌碼{chip_flow}, "
-              f"趨勢{trend}, 本益比{pe}, 營收成長{rev}。請結合全球半導體景氣，給出80字內精闢診斷與支撐壓力建議。")
+    # 這裡升級為「首席分析師」邏輯
+    prompt = f"""
+    你現在是高盛半導體首席分析師。請針對 {name} 進行深度診斷：
     
+    【當前數據環境】
+    - 市場價格: {price}
+    - 估值水平 (PE): {pe}
+    - 成長力道 (Rev Growth): {rev}
+    - 技術強弱 (RSI): {rsi:.1f}
+    - 資金流向: {chip_flow}
+    - 均線架構: {trend}
+
+    【分析要求】
+    1. 結合當前 AI 伺服器需求與半導體週期（如 HBM 缺貨、成熟製程競爭）。
+    2. 若 PE 顯著高於同行，請指出是「溢價成長」還是「估值過熱」。
+    3. 診斷必須包含一個「操作核心建議」（如：空手等待、支撐位加碼、高檔利了結）。
+    4. 語氣要極度專業、精煉，限制在 120 字內。
+    5. 不要給出空泛的「投資有風險」，直接切入市場核心邏輯。
+    """
+    
+    # 優先使用 Llama 3.3 70B (推論能力強)，備援 Gemini 2.0 Flash
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=250
+                messages=[
+                    {"role": "system", "content": "你是一位說話精準、見解毒辣的華爾街半導體資深分析師。"},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.5, # 降低隨機性，增加專業度
+                max_tokens=300
             )
-            return completion.choices[0].message.content
+            return "💎 首席室： " + completion.choices[0].message.content
         except: pass
+        
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
-            return res.text
-        except: return "⚠️ AI 引擎暫時忙碌中"
-    return "❌ AI 未啟動"
+            return "🔮 戰略部： " + res.text
+        except:
+            return "⚠️ 分析師會議中 (API 忙碌)"
+            
+    return "❌ 分析引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
