@@ -123,13 +123,26 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-def get_google_news(keyword):
-    news = []
+# --- 【升級：廣角搜尋雷達】 ---
+def get_strategic_news_radar(keyword):
+    now = datetime.now()
+    year, month = now.year, now.month
+    # 增加 337 調查、禁令、以及主要競爭對手關鍵字，確保能抓到產業地震新聞
+    sector_threats = "OR 337調查 OR 禁令 OR 鎧俠 OR 海力士 OR 記憶體報價"
+    # 自動判定財報季與擴產動態
+    time_strategy = "OR 財報 OR 展望" if month in [4, 5, 8, 11] else "OR 擴產 OR 併購"
+    
+    query = quote(f"{keyword} ({sector_threats} {time_strategy}) {year}")
+    # tbs=qdr:d 強制鎖定 24 小時內最新資訊
+    url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
+    
+    news_items = []
     try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:12]:
+            news_items.append(f"🔥 {entry.title}")
     except: pass
-    return news
+    return news_items
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
@@ -212,9 +225,8 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
-            # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
-            current_news = get_google_news(info['name'])
-            news_dict[info['name']] = current_news
+            # A. 抓取廣角新聞 (重要：這裡改用新函數)
+            current_news = get_strategic_news_radar(info['name'])
 
             # B. 抓取行情數據
             stock = yf.Ticker(ticker)
@@ -278,6 +290,15 @@ for name, news in news_dict.items():
         for n in news: st.markdown(n)
 
 for d in data_list:
+    # 1. 跑馬燈：放在卡片最上方
+    if d['news']:
+        marquee_html = f"""
+        <div class="marquee-container">
+            <div class="marquee-text">{' &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; '.join(d['news'])}</div>
+        </div>
+        """
+        st.markdown(marquee_html, unsafe_allow_html=True)
+    # 2. 數據卡片 (維持你原本的漂亮樣式)
     st.markdown(f"""
     <div class="status-card {d['style']}">
         <div style="display: flex; justify-content: space-between; align-items: center;">
