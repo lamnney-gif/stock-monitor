@@ -9,6 +9,7 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
+import requests
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
