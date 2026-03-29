@@ -80,6 +80,35 @@ st.markdown("""
         background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
         border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
     }
+    /* 跑馬燈容器 */
+    .marquee-wrapper {
+        background: #001529; 
+        color: #00f2ff; 
+        padding: 10px 0; 
+        overflow: hidden; 
+        white-space: nowrap; 
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #003a8c;
+    }
+    /* 跑馬燈動畫本體 */
+    .marquee-content {
+        display: inline-block;
+        padding-left: 100%;
+        animation: marquee-run 40s linear infinite;
+    }
+    .marquee-content a {
+        color: #00f2ff !important;
+        text-decoration: none;
+        font-weight: bold;
+        margin-right: 50px;
+    }
+    .marquee-content a:hover { text-decoration: underline; }
+    
+    @keyframes marquee-run {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(-100%, 0); }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -126,42 +155,23 @@ def get_volume_support(df):
 
 # --- 【升級：廣角搜尋雷達】 ---
 def get_strategic_news_radar(keyword):
-    """
-    優化版雷達：擴大搜尋範圍，確保 337 與產業新聞不漏接
-    """
-    now = datetime.now()
-    year = now.year
-    
-    # 策略 A：縮短關鍵字，讓搜尋更精準 (去掉太雜的 OR)
-    # 如果是記憶體個股，直接加強產業關鍵字搜尋
-    memory_stocks = ["力積電", "華邦電", "美光", "海力士", "南亞科"]
-    is_memory = any(m in keyword for m in memory_stocks)
-    
-    if is_memory:
-        # 針對記憶體股：搜 (個股名 OR 記憶體337 OR 記憶體禁令)
-        search_target = f"({keyword} OR 記憶體337 OR 記憶體禁令 OR 記憶體報價)"
-    else:
-        search_target = keyword
-
-    # 策略 B：放寬時間到「過去一週」(qdr:w)，確保重要新聞不會因為過了一天就消失
-    query = quote(f"{search_target} {year}")
-    url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:w"
-    
-    news_items = []
     try:
-        # 加入簡單的 Browser Header 避免被 Google 阻擋
+        search_target = f"{keyword} (337調查 OR 禁令 OR 記憶體報價 OR 產能)"
+        query = quote(search_target)
+        url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:w"
+        
         headers = {'User-Agent': 'Mozilla/5.0'}
         resp = requests.get(url, headers=headers, timeout=10)
         feed = feedparser.parse(resp.content)
         
-        for entry in feed.entries[:10]:
-            # 簡化標題，去掉來源網站名稱 (讓跑馬燈更乾淨)
+        # 儲存字典清單，包含標題與連結
+        news_data = []
+        for entry in feed.entries[:8]:
             clean_title = entry.title.split(" - ")[0]
-            news_items.append(f"• {clean_title}")
-    except Exception as e:
-        print(f"新聞抓取失敗: {e}")
-        
-    return news_items
+            news_data.append({"title": clean_title, "link": entry.link})
+        return news_data
+    except:
+        return []
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
@@ -312,24 +322,25 @@ st.sidebar.divider()
 st.sidebar.subheader("📰 產業即時雷達")
 
 for d in data_list:
-    stock_name = d['name'].split(" (")[0] # 取得中文名
-    current_stock_news = d.get('news', [])
-    
-    # 在側邊欄為每支股票建立收納盒
-    with st.sidebar.expander(f"📌 {stock_name} 相關動態"):
-        if current_stock_news:
-            for n in current_stock_news:
-                st.write(n)
+   # A. 側邊欄：新聞連結
+    with st.sidebar.expander(f"📌 {d['name']} 完整新聞"):
+        if d['news']:
+            for n in d['news']:
+                # 這裡變成超連結
+                st.markdown(f"• [{n['title']}]({n['link']})")
         else:
-            st.write("☁️ 24H 內暫無重大供應鏈新聞")
+            st.write("暫無最新消息")
 
-    # 1. 跑馬燈：卡片最上方（維持原樣）
-    if current_stock_news:
-        marquee_content = " &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; ".join(current_stock_news)
+    # B. 主頁面：跑馬燈 (帶連結)
+    if d['news']:
+        # 將所有新聞拼成帶 <a> 標籤的字串
+        items_html = "".join([f'<a href="{n["link"]}" target="_blank">{n["title"]}</a>' for n in d['news']])
         st.markdown(f"""
-        <div class="marquee-container">
-            <div class="marquee-text">{marquee_content}</div>
-        </div>
+            <div class="marquee-wrapper">
+                <div class="marquee-content">
+                    {items_html}
+                </div>
+            </div>
         """, unsafe_allow_html=True)
     # 2. 數據卡片 (維持你原本的漂亮樣式)
     st.markdown(f"""
