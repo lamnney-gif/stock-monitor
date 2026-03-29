@@ -271,6 +271,9 @@ with st.spinner('同步數據與 AI 運算中...'):
             # C. 基本面
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
+            # C. AI 診斷 (傳入新聞標題進行分析)
+            news_titles = [n['title'] for n in current_news] if current_news else []
+            ai_diag = get_ai_analysis(name, close_val, rsi, chip_flow, trend, "N/A", "N/A", news_titles)
             
             # D. 技術指標
             delta = df['Close'].diff()
@@ -307,7 +310,9 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label, "news": current_news
+                "chip_flow": chip_flow, "trend": trend_label, "news": current_news,
+                "stop_line": round(close_val * 0.97, 2), # 預設防線
+                "stop": round(close_val * 0.92, 2)       # 預設地板
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
@@ -322,25 +327,35 @@ st.sidebar.divider()
 st.sidebar.subheader("📰 產業即時雷達")
 
 for d in data_list:
-   # A. 側邊欄：新聞連結
+# --- 側邊欄新聞連結 ---
     with st.sidebar.expander(f"📌 {d['name']} 完整新聞"):
         if d['news']:
             for n in d['news']:
-                # 這裡變成超連結
                 st.markdown(f"• [{n['title']}]({n['link']})")
         else:
-            st.write("暫無最新消息")
+            st.write("☁️ 24H 內暫無重大雷達訊號")
 
-    # B. 主頁面：跑馬燈 (帶連結)
+    # --- 主頁面跑馬燈 ---
     if d['news']:
-        # 將所有新聞拼成帶 <a> 標籤的字串
-        items_html = "".join([f'<a href="{n["link"]}" target="_blank">{n["title"]}</a>' for n in d['news']])
+        # 建立 HTML 連結串
+        marquee_html = "".join([
+            f'<a href="{n["link"]}" target="_blank" style="color:#00f2ff; text-decoration:none; margin-right:50px; font-weight:bold;">'
+            f'🔥 {n["title"]}</a>' 
+            for n in d['news']
+        ])
+        
         st.markdown(f"""
-            <div class="marquee-wrapper">
-                <div class="marquee-content">
-                    {items_html}
-                </div>
+        <div class="marquee-wrapper" style="background:#001529; padding:10px; border-radius:8px; overflow:hidden; white-space:nowrap; margin-bottom:10px;">
+            <div class="marquee-content" style="display:inline-block; animation: marquee-run 40s linear infinite;">
+                {marquee_html}
             </div>
+        </div>
+        <style>
+        @keyframes marquee-run {{
+            0% {{ transform: translateX(100%); }}
+            100% {{ transform: translateX(-100%); }}
+        }}
+        </style>
         """, unsafe_allow_html=True)
     # 2. 數據卡片 (維持你原本的漂亮樣式)
     st.markdown(f"""
