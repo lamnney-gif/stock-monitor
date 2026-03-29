@@ -124,11 +124,21 @@ def get_volume_support(df):
     except: return 0
 
 def get_google_news(keyword):
+    """抓取 24 小時內最相關的新聞"""
     news = []
     try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
-    except: pass
+        # tbs=qdr:d 代表過去 24 小時；hl/gl 確保是台灣繁體中文內容
+        query = quote(f"{keyword} 股價")
+        url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
+        feed = feedparser.parse(url)
+        
+        # 只取前 3 則最精華的新聞
+        for entry in feed.entries[:3]:
+            # 去除標題末尾的媒體名稱 (例如: - 自由時報)
+            clean_title = entry.title.split(" - ")[0]
+            news.append(f"• [{clean_title}]({entry.link})")
+    except Exception as e:
+        print(f"新聞抓取錯誤: {e}")
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
