@@ -297,7 +297,7 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label
+                "chip_flow": chip_flow, "trend": trend_label, "news": current_news
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
