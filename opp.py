@@ -144,8 +144,8 @@ def get_google_news(keyword):
             if hasattr(entry, 'published_parsed'):
                 pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
                 
-                # 3. 計算時差：如果超過 48 小時就跳過
-                if now - pub_time > timedelta(hours=48):
+                # 3. 計算時差：如果超過 72 小時就跳過
+                if now - pub_time > timedelta(hours=72):
                     continue 
             
             # 4. 符合條件才加入清單
