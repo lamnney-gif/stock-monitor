@@ -143,8 +143,8 @@ def get_google_news(keyword):
     
     try:
         feed = feedparser.parse(url)
-        # 4. 只取最精華的前 3 則，並過濾掉重複標題
-        for entry in feed.entries[:3]:
+        # 4. 只取最精華的前 12 則，並過濾掉重複標題
+        for entry in feed.entries[:12]:
             news.append(f"• [{entry.title}]({entry.link})")
     except Exception as e:
         print(f"搜尋雷達故障: {e}")
