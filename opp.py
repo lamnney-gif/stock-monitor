@@ -9,7 +9,6 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
-import requests
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
@@ -80,35 +79,6 @@ st.markdown("""
         background-color: #fff2f0; border: 2px solid #ffccc7; padding: 15px; 
         border-radius: 10px; margin-bottom: 20px; border-left: 10px solid #ff4d4f;
     }
-    /* 跑馬燈容器 */
-    .marquee-wrapper {
-        background: #001529; 
-        color: #00f2ff; 
-        padding: 10px 0; 
-        overflow: hidden; 
-        white-space: nowrap; 
-        border-radius: 8px;
-        margin-bottom: 15px;
-        border: 1px solid #003a8c;
-    }
-    /* 跑馬燈動畫本體 */
-    .marquee-content {
-        display: inline-block;
-        padding-left: 100%;
-        animation: marquee-run 40s linear infinite;
-    }
-    .marquee-content a {
-        color: #00f2ff !important;
-        text-decoration: none;
-        font-weight: bold;
-        margin-right: 50px;
-    }
-    .marquee-content a:hover { text-decoration: underline; }
-    
-    @keyframes marquee-run {
-        0% { transform: translate(0, 0); }
-        100% { transform: translate(-100%, 0); }
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -153,25 +123,13 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# --- 【升級：廣角搜尋雷達】 ---
-def get_strategic_news_radar(keyword):
+def get_google_news(keyword):
+    news = []
     try:
-        search_target = f"{keyword} (337調查 OR 禁令 OR 記憶體報價 OR 產能)"
-        query = quote(search_target)
-        url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:w"
-        
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        resp = requests.get(url, headers=headers, timeout=10)
-        feed = feedparser.parse(resp.content)
-        
-        # 儲存字典清單，包含標題與連結
-        news_data = []
-        for entry in feed.entries[:8]:
-            clean_title = entry.title.split(" - ")[0]
-            news_data.append({"title": clean_title, "link": entry.link})
-        return news_data
-    except:
-        return []
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
@@ -254,8 +212,9 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
-            # A. 抓取廣角新聞 (重要：這裡改用新函數)
-            current_news = get_strategic_news_radar(info['name'])
+            # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
+            current_news = get_google_news(info['name'])
+            news_dict[info['name']] = current_news
 
             # B. 抓取行情數據
             stock = yf.Ticker(ticker)
@@ -271,9 +230,6 @@ with st.spinner('同步數據與 AI 運算中...'):
             # C. 基本面
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
-            # C. AI 診斷 (傳入新聞標題進行分析)
-            news_titles = [n['title'] for n in current_news] if current_news else []
-            ai_diag = get_ai_analysis(name, close_val, rsi, chip_flow, trend, "N/A", "N/A", news_titles)
             
             # D. 技術指標
             delta = df['Close'].diff()
@@ -310,9 +266,7 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label, "news": current_news,
-                "stop_line": round(close_val * 0.97, 2), # 預設防線
-                "stop": round(close_val * 0.92, 2)       # 預設地板
+                "chip_flow": chip_flow, "trend": trend_label
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
@@ -322,42 +276,8 @@ st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield
 for name, news in news_dict.items():
     with st.sidebar.expander(f"📰 {name} 相關動態"):
         for n in news: st.markdown(n)
-# 側邊欄頂部：全球風險監控
-st.sidebar.divider()
-st.sidebar.subheader("📰 產業即時雷達")
 
 for d in data_list:
-# --- 側邊欄新聞連結 ---
-    with st.sidebar.expander(f"📌 {d['name']} 完整新聞"):
-        if d['news']:
-            for n in d['news']:
-                st.markdown(f"• [{n['title']}]({n['link']})")
-        else:
-            st.write("☁️ 24H 內暫無重大雷達訊號")
-
-    # --- 主頁面跑馬燈 ---
-    if d['news']:
-        # 建立 HTML 連結串
-        marquee_html = "".join([
-            f'<a href="{n["link"]}" target="_blank" style="color:#00f2ff; text-decoration:none; margin-right:50px; font-weight:bold;">'
-            f'🔥 {n["title"]}</a>' 
-            for n in d['news']
-        ])
-        
-        st.markdown(f"""
-        <div class="marquee-wrapper" style="background:#001529; padding:10px; border-radius:8px; overflow:hidden; white-space:nowrap; margin-bottom:10px;">
-            <div class="marquee-content" style="display:inline-block; animation: marquee-run 40s linear infinite;">
-                {marquee_html}
-            </div>
-        </div>
-        <style>
-        @keyframes marquee-run {{
-            0% {{ transform: translateX(100%); }}
-            100% {{ transform: translateX(-100%); }}
-        }}
-        </style>
-        """, unsafe_allow_html=True)
-    # 2. 數據卡片 (維持你原本的漂亮樣式)
     st.markdown(f"""
     <div class="status-card {d['style']}">
         <div style="display: flex; justify-content: space-between; align-items: center;">
