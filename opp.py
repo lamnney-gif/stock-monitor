@@ -248,6 +248,9 @@ with st.spinner('同步數據與 AI 運算中...'):
             # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
             current_news = get_google_news(info['name'])
             news_dict[info['name']] = current_news
+            
+            # 呼叫 AI 前先等一下，避開 RPM 限制
+            time.sleep(1.5) # 👈 給 Groq 一點時間準備下一則請求
 
             # B. 抓取行情數據
             stock = yf.Ticker(ticker)
