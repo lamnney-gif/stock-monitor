@@ -164,6 +164,11 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
             return "🔥 策略室： " + completion.choices[0].message.content
         except: pass
         
+    if ai_engines["gemini"]:
+        try:
+            res = ai_engines["gemini"].generate_content(prompt)
+            return "🔮 戰略部： " + res.text
+        except: return "⚠️ 分析師會議中 (API 忙碌)"
     return "❌ 分析引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
