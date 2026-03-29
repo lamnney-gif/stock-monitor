@@ -123,24 +123,42 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
+from datetime import datetime, timedelta
+import time
+
 def get_google_news(keyword):
-    """抓取 24 小時內最相關的新聞"""
+    """手動過濾：只保留真正 24 小時內的新聞"""
     news = []
     try:
-        # tbs=qdr:d 代表過去 24 小時；hl/gl 確保是台灣繁體中文內容
+        # 1. 一樣帶著參數去要資料
         query = quote(f"{keyword} 股價")
         url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
         feed = feedparser.parse(url)
         
-        # 只取前 3 則最精華的新聞
-        for entry in feed.entries[:3]:
-            # 去除標題末尾的媒體名稱 (例如: - 自由時報)
+        # 取得現在時間 (UTC)
+        now = datetime.utcnow()
+        
+        for entry in feed.entries:
+            # 2. 解析這條新聞的發布時間
+            # entry.published_parsed 是一個時間元組 (struct_time)
+            if hasattr(entry, 'published_parsed'):
+                pub_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                
+                # 3. 計算時差：如果超過 24 小時就跳過
+                if now - pub_time > timedelta(hours=24):
+                    continue 
+            
+            # 4. 符合條件才加入清單
             clean_title = entry.title.split(" - ")[0]
             news.append(f"• [{clean_title}]({entry.link})")
+            
+            # 5. 湊滿 3 則就收工，避免側邊欄太擠
+            if len(news) >= 3:
+                break
+                
     except Exception as e:
-        print(f"新聞抓取錯誤: {e}")
+        print(f"新聞過濾失敗: {e}")
     return news
-
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
 @st.cache_data(ttl=14400)
