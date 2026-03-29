@@ -125,23 +125,41 @@ def get_volume_support(df):
 
 # --- 【升級：廣角搜尋雷達】 ---
 def get_strategic_news_radar(keyword):
+    """
+    優化版雷達：擴大搜尋範圍，確保 337 與產業新聞不漏接
+    """
     now = datetime.now()
-    year, month = now.year, now.month
-    # 增加 337 調查、禁令、以及主要競爭對手關鍵字，確保能抓到產業地震新聞
-    sector_threats = "OR 337調查 OR 禁令 OR 鎧俠 OR 海力士 OR 記憶體報價"
-    # 自動判定財報季與擴產動態
-    time_strategy = "OR 財報 OR 展望" if month in [4, 5, 8, 11] else "OR 擴產 OR 併購"
+    year = now.year
     
-    query = quote(f"{keyword} ({sector_threats} {time_strategy}) {year}")
-    # tbs=qdr:d 強制鎖定 24 小時內最新資訊
-    url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:d"
+    # 策略 A：縮短關鍵字，讓搜尋更精準 (去掉太雜的 OR)
+    # 如果是記憶體個股，直接加強產業關鍵字搜尋
+    memory_stocks = ["力積電", "華邦電", "美光", "海力士", "南亞科"]
+    is_memory = any(m in keyword for m in memory_stocks)
+    
+    if is_memory:
+        # 針對記憶體股：搜 (個股名 OR 記憶體337 OR 記憶體禁令)
+        search_target = f"({keyword} OR 記憶體337 OR 記憶體禁令 OR 記憶體報價)"
+    else:
+        search_target = keyword
+
+    # 策略 B：放寬時間到「過去一週」(qdr:w)，確保重要新聞不會因為過了一天就消失
+    query = quote(f"{search_target} {year}")
+    url = f"https://news.google.com/rss/search?q={query}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant&tbs=qdr:w"
     
     news_items = []
     try:
-        feed = feedparser.parse(url)
-        for entry in feed.entries[:12]:
-            news_items.append(f"🔥 {entry.title}")
-    except: pass
+        # 加入簡單的 Browser Header 避免被 Google 阻擋
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        resp = requests.get(url, headers=headers, timeout=10)
+        feed = feedparser.parse(resp.content)
+        
+        for entry in feed.entries[:10]:
+            # 簡化標題，去掉來源網站名稱 (讓跑馬燈更乾淨)
+            clean_title = entry.title.split(" - ")[0]
+            news_items.append(f"• {clean_title}")
+    except Exception as e:
+        print(f"新聞抓取失敗: {e}")
+        
     return news_items
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
