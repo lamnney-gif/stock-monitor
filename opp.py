@@ -288,16 +288,25 @@ st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield
 for name, news in news_dict.items():
     with st.sidebar.expander(f"📰 {name} 相關動態"):
         for n in news: st.markdown(n)
+# 側邊欄頂部：全球風險監控
+st.sidebar.divider()
+st.sidebar.subheader("📰 產業即時雷達")
 
 for d in data_list:
-# --- 【修正區：使用 .get() 安全讀取，避免 KeyError】 ---
-    current_stock_news = d.get('news', []) 
+    stock_name = d['name'].split(" (")[0] # 取得中文名
+    current_stock_news = d.get('news', [])
     
+    # 在側邊欄為每支股票建立收納盒
+    with st.sidebar.expander(f"📌 {stock_name} 相關動態"):
+        if current_stock_news:
+            for n in current_stock_news:
+                st.write(n)
+        else:
+            st.write("☁️ 24H 內暫無重大供應鏈新聞")
+
+    # 1. 跑馬燈：卡片最上方（維持原樣）
     if current_stock_news:
-        # 將新聞標題串接，中間加入間距
         marquee_content = " &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; ".join(current_stock_news)
-        
-        # 顯示跑馬燈
         st.markdown(f"""
         <div class="marquee-container">
             <div class="marquee-text">{marquee_content}</div>
