@@ -290,14 +290,19 @@ for name, news in news_dict.items():
         for n in news: st.markdown(n)
 
 for d in data_list:
-    # 1. 跑馬燈：放在卡片最上方
-    if d['news']:
-        marquee_html = f"""
+# --- 【修正區：使用 .get() 安全讀取，避免 KeyError】 ---
+    current_stock_news = d.get('news', []) 
+    
+    if current_stock_news:
+        # 將新聞標題串接，中間加入間距
+        marquee_content = " &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; ".join(current_stock_news)
+        
+        # 顯示跑馬燈
+        st.markdown(f"""
         <div class="marquee-container">
-            <div class="marquee-text">{' &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; '.join(d['news'])}</div>
+            <div class="marquee-text">{marquee_content}</div>
         </div>
-        """
-        st.markdown(marquee_html, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     # 2. 數據卡片 (維持你原本的漂亮樣式)
     st.markdown(f"""
     <div class="status-card {d['style']}">
