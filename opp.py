@@ -191,7 +191,7 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
         trend, 
         pe, 
         rev, 
-        tuple(news) # 這裡必須把 list 轉成 tuple，因為 Cache 不支援 list
+        news # 這裡必須把 list 轉成 tuple，因為 Cache 不支援 list
     )
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
