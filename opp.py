@@ -171,7 +171,7 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
         except: return "⚠️ 分析師會議中 (API 忙碌)"
     return "❌ 分析引擎未啟動"
 
-def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
+def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 0
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
@@ -182,7 +182,8 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'])
+    # 傳入新聞進行深度分析
+    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
