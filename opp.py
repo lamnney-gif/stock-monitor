@@ -290,6 +290,20 @@ with st.spinner('同步數據與 AI 運算中...'):
             })
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
+            
+            # 3. 抓取「廣角新聞」 (雷達偵測：337調查、禁令、財報)
+        news_radar = get_strategic_news_radar(tickers[tk])
+        
+        # --- 【關鍵：跑馬燈放在卡片上方】 ---
+        if news_radar:
+            marquee_content = " &nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp; ".join(news_radar)
+            st.markdown(f"""
+                <div class="marquee-container">
+                    <div class="marquee-text">{marquee_content}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        # --- 【結束：跑馬燈顯示區】 ---
+
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
