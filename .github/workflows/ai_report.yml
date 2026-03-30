@@ -1,1 +1,21 @@
-
+name: AI Strategy Every 4 Hours
+on:
+  schedule:
+    - cron: '0 */4 * * *' # 每 4 小時執行一次
+  workflow_dispatch:
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run AI
+        env:
+          GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
+        run: python analysis.py
+      - name: Commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add analysis_results.json
+          git commit -m "Update AI Report" || exit 0
+          git push
