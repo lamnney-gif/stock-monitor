@@ -125,7 +125,7 @@ for tk in ticker_list:
         PRICE=str(d.get('price', '---')), PE=str(d.get('pe', '---')),
         GROWTH=str(d.get('growth', '---')), RSI=str(d.get('rsi', '---')),
         CHIPS=str(d.get('chips', '---')), VOL_RATIO=str(d.get('volume_ratio', '---')),
-        BUY_POINT=str(d.get('buy_point', '---')), SUPPORT=str(d.get('support', '---')),
+        BUY_POINT=str(d.get('buy_point', '---')), SUPPORT=str(d.get('stop_profit_line', '---')),
         PRESSURE=str(d.get('pressure', '---')), ATR=str(d.get('dynamic_stop', '---')),
         TURNOVER=str(d.get('turnover_zone', '---')), REPORT=report_clean
     )
