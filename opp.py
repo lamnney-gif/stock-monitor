@@ -16,39 +16,47 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
+# 強制校準台北現在時間 (UTC+8)
+now_tw = datetime.utcnow() + timedelta(hours=8)
+
 # --- 2. 狀態列與倒數計時 ---
 col_time1, col_time2 = st.columns(2)
 
 with col_time1:
-    # 顯示行情最後更新時間 (從 data_raw.json 讀取)
-    m_up = raw_db.get("last_update", "---")
-    st.metric("💹 行情同步 (台北)", m_up)
+    # 這裡顯示的是 JSON 裡的靜態時間，代表數據新鮮度
+    m_up = raw_db.get("last_update", "等待同步...")
+    st.metric("💹 行情數據存檔時間 (台北)", m_up)
     refresh_timer = st.empty()
 
 with col_time2:
     ai_last_time_str = ai_db.get("last_update", "---")
     if ai_last_time_str != "---":
         try:
-            # 解析 JSON 裡的台北時間
-            last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
-            # 設定目標：4 小時後
+            # 去除可能的前後空格，確保解析正確
+            clean_time = ai_last_time_str.strip()
+            # 支援多種格式解析，防止 Action 寫入格式稍微變動就報錯
+            try:
+                last_dt = datetime.strptime(clean_time, "%Y-%m-%d %H:%M:%S")
+            except:
+                # 備用格式 (萬一沒有秒數或格式不同)
+                last_dt = datetime.strptime(clean_time[:16], "%Y-%m-%d %H:%M")
+            
             next_dt = last_dt + timedelta(hours=4)
-            # 計算精準秒數差
             diff_seconds = int((next_dt - now_tw).total_seconds())
             
-            if diff_seconds > 0 and diff_seconds <= 14400:
-                # 正常倒數
+            if 0 < diff_seconds <= 14400:
                 hrs = diff_seconds // 3600
                 mins = (diff_seconds % 3600) // 60
                 ai_msg = f"🤖 AI 下次改版倒數: {hrs}時 {mins}分"
+                st.info(ai_msg)
             else:
-                # 如果時間到了或數據異常
-                ai_msg = "⏳ AI 診斷：新一輪報告正在發布中..."
-        except:
-            ai_msg = "⚠️ 時間格式解析異常"
+                # 如果時間超過 4 小時或已經過期，代表 Action 正在跑
+                st.warning("⏳ AI 診斷：新一輪報告正在發布中...")
+        except Exception as e:
+            # 報錯時顯示具體原因，方便抓蟲
+            st.error(f"⚠️ 時間解析失敗: {str(e)}")
     else:
-        ai_msg = "🤖 AI 更新時間：等待同步中"
-    st.info(ai_msg)
+        st.info("🤖 AI 更新時間：等待同步中")
 
 # --- 3. 免責聲明 ---
 st.markdown("""
