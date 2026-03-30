@@ -6,31 +6,8 @@ import numpy as np
 from datetime import datetime, timedelta
 
 def get_tw_time():
+    """獲取台北時間作為數據基準點"""
     return (datetime.utcnow() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
-
-def calculate_atr(df, period=14):
-    """計算真實 ATR (Average True Range)"""
-    try:
-        high_low = df['High'] - df['Low']
-        high_cp = np.abs(df['High'] - df['Close'].shift())
-        low_cp = np.abs(df['Low'] - df['Close'].shift())
-        
-        tr = pd.concat([high_low, high_cp, low_cp], axis=1).max(axis=1)
-        atr = tr.rolling(window=period).mean()
-        return round(atr.iloc[-1], 2)
-    except:
-        return round(df['Close'].iloc[-1] * 0.03, 2) # 失敗則給 3% 預設波幅
-
-def calculate_rsi(series, period=14):
-    try:
-        delta = series.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        val = 100 - (100 / (1 + rs))
-        return round(val.iloc[-1], 2)
-    except:
-        return 50.0
 
 def run_market():
     tickers = {
@@ -44,42 +21,68 @@ def run_market():
     for sym, name in tickers.items():
         try:
             tk = yf.Ticker(sym)
+            # 💡 抓取 3 個月數據，確保 Rolling 計算有足夠樣本
             df = tk.history(period="3mo") 
-            if df.empty or len(df) < 20: continue
+            if df.empty or len(df) < 20:
+                print(f"⚠️ {name} 數據不足，跳過")
+                continue
             
+            # --- 核心計算開始 ---
             price = round(df['Close'].iloc[-1], 2)
             
-            # 💡 核心修正：使用真正的 ATR 函數
-            real_atr = calculate_atr(df, 14)
+            # 💡 關鍵修正：真正的 ATR (True Range) 邏輯
+            # TR 取三者最大：(當前高低差, 當前高與前收差, 當前低與前收差)
+            hl = df['High'] - df['Low']
+            hc = np.abs(df['High'] - df['Close'].shift())
+            lc = np.abs(df['Low'] - df['Close'].shift())
+            tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
             
-            # 使用 ATR 來定義支撐與壓力 (比 std 更符合真實交易)
-            # 支撐設在 1.5 倍 ATR 處，壓力設在 1.5 倍 ATR 處
-            support = round(price - (real_atr * 1.5), 2)
-            pressure = round(price + (real_atr * 1.5), 2)
-            buy_point = round(price - (real_atr * 1.0), 2)
+            # 計算 14 日平均真實波幅 (ATR)
+            atr_val = tr.rolling(14).mean().iloc[-1]
+            atr_val = round(atr_val, 2) if not pd.isna(atr_val) else round(price * 0.03, 2)
             
-            rsi_val = calculate_rsi(df['Close'], 14)
+            # 基於 ATR 的動態支撐壓力 (1.5 倍 ATR 是標準風控距離)
+            support = round(price - (atr_val * 1.5), 2)
+            pressure = round(price + (atr_val * 1.5), 2)
+            buy_point = round(price - (atr_val * 1.2), 2)
+            
+            # RSI 計算
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            rs = gain / loss
+            rsi_val = round(100 - (100 / (1 + rs.iloc[-1])), 2) if not pd.isna(rs.iloc[-1]) else 50.0
+            
+            # 成交量比 (5日均)
+            vol_ratio = round(df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean(), 2)
+            
+            # 抓取基本面 info
             info = tk.info if tk.info else {}
-            
+            pe = info.get('trailingPE', "---")
+            growth = info.get('revenueGrowth')
+            growth_str = f"{growth*100:.1f}%" if (growth is not None) else "---"
+
+            # 存入結果
             raw_results["stocks"][sym] = {
                 "name": name,
                 "price": price,
-                "pe": round(info.get('trailingPE', 0), 2) if info.get('trailingPE') else "---",
-                "growth": f"{info.get('revenueGrowth', 0)*100:.1f}%" if info.get('revenueGrowth') else "---",
+                "pe": round(pe, 2) if isinstance(pe, (int, float)) else pe,
+                "growth": growth_str,
                 "rsi": rsi_val,
-                "volume_ratio": round(df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean(), 2),
+                "volume_ratio": vol_ratio,
                 "chips": "🔥 強勢" if rsi_val > 60 else ("💀 轉弱" if rsi_val < 40 else "☁️ 盤整"),
                 "support": support,
                 "pressure": pressure,
-                "atr": real_atr,
-                "turnover_zone": round(price * 0.99, 2),
+                "atr": atr_val,
+                "turnover_zone": round(price * 0.985, 2), # 密集換手區模擬
                 "buy_point": buy_point
             }
-            print(f"✅ {name} ATR 計算完成: {real_atr}")
+            print(f"✅ {name} 數據處理完成 (ATR: {atr_val})")
             
         except Exception as e:
-            print(f"❌ {sym} 失敗: {str(e)}")
+            print(f"❌ {sym} 執行錯誤: {str(e)}")
 
+    # 寫入 JSON
     with open("data_raw.json", "w", encoding="utf-8") as f:
         json.dump(raw_results, f, ensure_ascii=False, indent=4)
 
