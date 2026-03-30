@@ -1,28 +1,32 @@
 name: 4h AI Strategist
 on:
   schedule:
-    - cron: '0 */4 * * *'  # 台北時間每 4 小時執行一次
-  workflow_dispatch:      # 允許手動點擊執行
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
 jobs:
-  update-ai:
+  update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install dependencies
+      - name: Install deps
         run: pip install groq
-      - name: Run AI Analysis
+      - name: Run AI
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
-          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}  # 你的雙鑰匙備援
-        run: python analyzer.py  # <--- 這裡改回你的正確檔名了！
-      - name: Commit and Push Analysis
+          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+        run: python analyzer.py
+      - name: Push
+        env:
+          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
           git add analysis_results.json
-          git commit -m "🧠 AI 戰略報告更新: $(date)" || exit 0
+          git commit -m "🧠 AI 戰略報告更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
           git push
