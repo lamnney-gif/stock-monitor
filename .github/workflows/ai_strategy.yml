@@ -5,54 +5,54 @@ on:
     - cron: '0 */4 * * *'
   workflow_dispatch:
 
-env:
-  # 🟢 第一重防線：消除 Node.js 警告
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      # 🟢 第二重防線：明確指定最新版本，並加入環境變數
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 抓取完整歷史，防止 rebase 失敗
+          # 不要抓全部歷史，直接抓最新一份，減少 128 衝突
+          fetch-depth: 1 
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install deps
-        run: pip install groq pandas
-
       - name: Run AI
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
-          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_1 }}
-        run: python analyzer.py
+          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+        run: |
+          pip install groq pandas
+          python analyzer.py
 
-      - name: Force Push AI Results
+      - name: Push Results
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "AI-Bot"
+          git config --local user.name "github-actions[bot]"
           
-          # 🟢 第三重防線：暴力解決 Exit Code 128
-          # 先清理可能鎖死的索引，再拉取遠端，最後推送
-          git gc --prune=now
-          git remote update
+          # 解決 128 錯誤的最強手段：強制從遠端覆蓋
+          git fetch origin main
+          git checkout main analysis_results.json || echo "New file"
           
-          for i in {1..5}; do
-            git pull --rebase origin main
-            git add analysis_results.json
-            if git diff --staged --quiet; then
-              echo "No changes"
-              exit 0
-            fi
-            git commit -m "🧠 AI Update: $(date +'%Y-%m-%d %H:%M:%S')"
-            git push origin main && break || (sleep 10 && git pull --rebase origin main)
-          done
+          git add analysis_results.json
+          
+          # 檢查是否有變動
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "🧠 AI Update $(date +'%Y-%m-%d %H:%M')"
+            # 暴力推播：失敗就 rebase 重試 3 次
+            n=0
+            until [ $n -ge 3 ]
+            do
+              git push origin main && break
+              n=$((n+1))
+              git pull --rebase origin main
+              sleep 5
+            done
+          fi
