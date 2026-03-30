@@ -47,6 +47,12 @@ def run_market():
             
             # 💡 關鍵修正 2：確保價格抓取最後一個非空值
             price = round(df['Close'].dropna().iloc[-1], 2)
+
+            # 使用 ATR 來定義支撐與壓力 (比 std 更符合真實交易)
+            # 支撐設在 1.5 倍 ATR 處，壓力設在 1.5 倍 ATR 處
+            support = round(price - (real_atr * 1.5), 2)
+            pressure = round(price + (real_atr * 1.5), 2)
+            buy_point = round(price - (real_atr * 1.0), 2)
             
             # RSI 計算
             rsi_val = calculate_rsi(df['Close'], 14)
