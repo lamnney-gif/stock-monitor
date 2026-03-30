@@ -59,8 +59,13 @@ with col_time2:
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
-    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️ 系統使用免責聲明</h3>
-    <p style="color:#5d4037; font-size:0.85em; margin:5px 0 0 0;">本平台數據僅供研究參考，投資者應自行評估風險並自負損益。</p>
+    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️讀前必視：個人實驗開發環境</h3>
+    <p style="color:#5d4037; font-size:0.85em; margin:5px 0 0 0;">    
+    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
+    2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
+    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
+    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
