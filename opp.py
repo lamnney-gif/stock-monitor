@@ -142,9 +142,11 @@ for tk in ticker_list:
     )
     st.markdown(html_output, unsafe_allow_html=True)
 
-# --- 6. 動態倒數計時邏輯 ---
+# ---6. 底部：驅動 60 秒刷新 ---
+# 這裡必須使用上面定義好的 refresh_timer
 for i in range(60, 0, -1):
     refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{i} 秒")
     time.sleep(1)
 
+# 時間到，強制重整
 st.rerun()
