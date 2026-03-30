@@ -156,21 +156,21 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     
     if ai_engines["groq"]:
         try:
-            time.sleep(2) # 強制冷卻 2 秒，防止 429 錯誤
+            # 使用你終端機測試成功的模型 ID
             completion = ai_engines["groq"].chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
-                          {"role": "user", "content": prompt}]
+                model="llama3-8b-8192", 
+                messages=[
+                    {"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
+                    {"role": "user", "content": prompt}
+                ],
+                timeout=15.0 # 加入超時控制，避免卡死
             )
             return "🔥 策略室： " + completion.choices[0].message.content
-        except: pass
-        
-    if ai_engines["gemini"]:
-        try:
-            res = ai_engines["gemini"].generate_content(prompt)
-            return "🔮 戰略部： " + res.text
-        except: return "⚠️ 分析師會議中 (API 忙碌)"
-    return "❌ 分析引擎未啟動"
+        except Exception as e:
+            # 報錯時回傳具體原因，方便你偵錯
+            return f"❌ Groq 診斷暫時中斷: {str(e)[:50]}"
+    
+    return "❌ Groq 引擎未啟動 (請檢查 API KEY)"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 0
