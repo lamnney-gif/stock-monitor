@@ -155,8 +155,8 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     """
     
     if ai_engines["groq"]:
-        time.sleep(5)
         try:
+            time.sleep(5)
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
