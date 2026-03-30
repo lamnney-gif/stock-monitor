@@ -10,6 +10,19 @@ import google.generativeai as genai
 import time
 from groq import Groq
 
+# --- [防封鎖核心] 建立偽裝 Session ---
+@st.cache_resource
+def get_safe_session():
+    session = requests.Session()
+    # 偽裝成一般的 Chrome 瀏覽器，避開 Yahoo 的偵測
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    })
+    return session
+
+safe_session = get_safe_session()
+
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
