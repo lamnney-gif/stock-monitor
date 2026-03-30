@@ -132,47 +132,39 @@ def get_google_news(keyword):
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
-
-@st.cache_data(ttl=14400)
+@st.cache_data(ttl=14400, show_spinner=False)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
-    
     prompt = f"""
-    你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
-    
-    【1. 即時政經與外部衝突】
+    你現在是高盛(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行診斷。
     市場現狀：{news_context}
-    請自行識別當前的核心驅動力(如地緣政治開戰、油價飆升、AI需求轉折)。
-    分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
-
-    【2. 個股估值與技術面】
-    現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
-    
-    【3. 操作核心建議】
-    結合政經變數，判斷目前是「溢價合理」還是「黑天鵝預警」。
-    給出具體的實戰部署（如：回測加碼、高檔利了結、現金為王）。
-    語氣專業冷靜，限制在 130 字內。
+    數據：現價:{price} | PE:{pe} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
+    請分析外部衝擊對該公司供應鏈與資金流向的具體損益。
+    限制在 130 字內。
     """
-    
+    # 優先嘗試 Groq
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
-                          {"role": "user", "content": prompt}]
+                messages=[{"role": "system", "content": "你是一位資深策略家。"}, {"role": "user", "content": prompt}],
+                timeout=10
             )
             return "🔥 策略室： " + completion.choices[0].message.content
         except: pass
         
+    # 次要嘗試 Gemini
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
             return "🔮 戰略部： " + res.text
-        except: return "⚠️ 分析師會議中 (API 忙碌)"
-    return "❌ 分析引擎未啟動"
+        except: pass
+
+    # 若皆失敗，則拋出錯誤不存入 cache
+    raise Exception("AI API Limit reached")
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
-    score = 0
+    score = 50
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
     elif vix > 28: score -= 30
@@ -182,8 +174,11 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    # 傳入新聞進行深度分析
-    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
+# 捕獲 AI 診斷錯誤，避免影響整個畫面的呈現
+    try:
+        ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
+    except:
+        ai_report = "⏳ API 呼叫頻繁，請手動刷新或稍候 (數據已緩存)。"
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
@@ -254,6 +249,10 @@ with st.spinner('同步數據與 AI 運算中...'):
             # F. AI 綜合診斷
             pe_str = f"{pe_val:.1f}" if pe_val else "N/A"
             rev_str = f"{rev_growth:.1f}%"
+
+            # 核心修正：在此加入間隔時間，防止 API 429 Error
+            time.sleep(2.0)
+            
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
                 {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name'], current_news
@@ -269,7 +268,7 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "chip_flow": chip_flow, "trend": trend_label
             })
         except Exception as e:
-            st.warning(f"跳過 {ticker}: {e}")
+            st.error(f"無法載入 {ticker}: {e}")
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
@@ -288,7 +287,7 @@ for d in data_list:
             <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | <b style="color:#003a8c;">本益比: {d['pe']}</b> | <b style="color:#096dd9;">營收成長: {d['rev']}</b> | 乖離率: {d['bias']}% | 機構: {d['inst']}
+            趨勢: {d['trend']} | 本益比: {d['pe']} | 營收成長: {d['rev']} | 乖離率: {d['bias']}% | 機構持股: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
@@ -296,9 +295,9 @@ for d in data_list:
                 <b>🧠 智權診斷 (AI 版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
                 <div class="defense-box">
                     ⚙️ <b>風控與成本模擬：</b> 
-                    <span style="color:#1890ff;">營利防守觀察點: {d['stop_line']}</span> | 
-                    <span style="color:#cf1322; font-weight:bold;">ATR底線(地板): {d['stop']}</span> <br>
-                    <b>密集換手區間(大部份交易點): {d['chip_floor']}</b> | 統計支撐: {d['sup']}
+                    <span style="color:#1890ff;">營利觀察點: {d['stop_line']}</span> | 
+                    <span style="color:#cf1322; font-weight:bold;">ATR地板: {d['stop']}</span> <br>
+                    <b>密集換手區: {d['chip_floor']}</b> | 統計支撐: {d['sup']}
                 </div>
             </div>
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
@@ -306,7 +305,7 @@ for d in data_list:
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div><span class="price-label">🟢 觀察買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
-                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
+                    <div style="grid-column: span 2; height: 1px; background: #ddd;"></div>
                     <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
                     <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div>
                 </div>
@@ -314,7 +313,6 @@ for d in data_list:
         </div>
     </div>
     """, unsafe_allow_html=True)
-
 for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
     time.sleep(1)
