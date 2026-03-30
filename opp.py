@@ -132,36 +132,38 @@ def get_google_news(keyword):
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
-@st.cache_data(ttl=14400)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
-    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
-    prompt = f"""
-    你現在是高盛(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行診斷。
-    市場現狀：{news_context}
-    數據：現價:{price} | PE:{pe} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
-    請分析外部衝擊對該公司供應鏈與資金流向的具體損益。
-    限制在 130 字內。
+@st.cache_data(ttl=14400, show_spinner=False)
+def get_ai_analysis_safe(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     """
-    # 優先嘗試 Groq
+    這個函數只在成功時回傳。如果 API 噴 429 錯誤，它會拋出 Exception，
+    這樣 Streamlit 就『不會』緩存錯誤訊息，下次重整才會重新挑戰 API。
+    """
+    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
+    prompt = f"針對 {name} 診斷。現價:{price}, PE:{pe}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, 新聞:{news_context}。請給出實戰部署，100字內。"
+    
+    # 嘗試 Groq
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位資深策略家。"}, {"role": "user", "content": prompt}],
-                timeout=10
+                messages=[{"role": "user", "content": prompt}],
+                timeout=5 # 快速超時，不要卡住
             )
             return "🔥 策略室： " + completion.choices[0].message.content
-        except: pass
-        
-    # 次要嘗試 Gemini
+        except Exception as e:
+            pass # 失敗了，改試下一家
+            
+    # 嘗試 Gemini
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
-            return "🔮 戰略部： " + res.text
-        except: pass
+            if res.text:
+                return "🔮 戰略部： " + res.text
+        except:
+            pass
 
-    # 若皆失敗，則拋出錯誤不存入 cache
-    raise Exception("AI API Limit reached")
+    # 如果都失敗，拋出異常，防止 Streamlit 緩存 "錯誤字串"
+    raise Exception("API_LIMIT_REACHED")
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 60
@@ -174,11 +176,14 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-# 捕獲 AI 診斷錯誤，避免影響整個畫面的呈現
     try:
-        ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
+        # 呼叫緩存保護版 AI
+        ai_report = get_ai_analysis_safe(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
+        ai_style = "✅" if score >= 70 else "🔎"
     except:
-        ai_report = "⏳ API 呼叫頻繁，請手動刷新或稍候 (數據已緩存)。"
+        # 當 API 爆掉時，給一個體面的提示，而不是紅色的全面避險
+        ai_report = "⏳ AI 正在排隊診斷中... (API 流量限制)。目前依賴技術面分析。"
+        ai_style = "🔎" # 強制顯示藍色/白色卡片
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
@@ -204,7 +209,8 @@ with st.spinner('同步數據與 AI 運算中...'):
     sox = yf.Ticker("^SOX").history(period="1mo")
     sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
-
+# 在 loop 裡面，把間隔拉長
+with st.spinner('AI 正在逐一分析中，這可能需要一分鐘...'):
     for ticker, info in tickers.items():
         try:
             # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
