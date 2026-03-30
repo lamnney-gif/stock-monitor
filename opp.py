@@ -125,7 +125,7 @@ def get_volume_support(df):
 
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
 @st.cache_data(ttl=3600)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, us10y):
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev ):
     # 決定利率環境的標籤
     interest_context = "【利率屠刀】估值殺盤期" if us10y > 4.5 else "【資金充裕】多頭暖冬"
     
@@ -133,7 +133,6 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, us10y):
     prompt = f"""
     標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
     數據：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
-    環境：10Y美債利率 {us10y}% ({interest_context})
     
     指令：
     1. 結合 2026 年 3 月最新的地緣政治（如台海摩擦、中東能源）與美債波動，直接點出這檔標的是「送死」還是「機會」。
