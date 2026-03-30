@@ -111,7 +111,7 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷 (高盛魂 + Groq) ---
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
     if not ai_engines["groq"]: return "❌ Groq 引擎離線"
     fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。"
