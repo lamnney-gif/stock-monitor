@@ -213,6 +213,8 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
+            # --- [新增] 控制請求頻率，避免 API 報錯 ---
+            time.sleep(1.5)
             # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
             current_news = get_google_news(info['name'])
             news_dict[info['name']] = current_news
@@ -267,10 +269,12 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label
+                "chip_flow": chip_flow, "trend": trend_label,
+                "upper_limit": round(upper_limit, 2), # 存入上限
+                "limit_label": limit_label          # 存入標籤
             })
         except Exception as e:
-            st.warning(f"跳過 {ticker}: {e}")
+            st.error(f"跳過 {ticker}: {e}")
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
@@ -307,9 +311,14 @@ for d in data_list:
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div><span class="price-label">🟢 觀察買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
                     <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
+    
                     <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
+    
+                    <div><span class="price-label">🚫 {d['limit_label']}</span><br><span class="price-value" style="color:#722ed1;">{d['upper_limit']}</span></div>
                     <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
-                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div>
+    
+                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
+                    <div style="grid-column: span 2;"><span class="price-label">📈 統計壓力上限</span><br><span class="price-value">{d['pre']}</span></div>
                 </div>
             </div>
         </div>
