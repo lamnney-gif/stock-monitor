@@ -28,6 +28,7 @@ jobs:
       - name: 執行 AI 分析
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
+          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }} # 備用
         run: python analyzer.py
 
       - name: 存回 GitHub
