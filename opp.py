@@ -1,9 +1,8 @@
 import streamlit as st
-import yfinance as yf
+import streamlit.components.v1 as components
 import json
 import os
 import time
-from datetime import datetime
 
 st.set_page_config(page_title="Beta Lab AI Ultimate", layout="wide")
 
@@ -28,71 +27,61 @@ tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS"
 
 for ticker, name in tickers.items():
     d = raw_db.get("stocks", {}).get(ticker, {})
-    # 關鍵修正：將 AI 報告中的換行符號替換為 HTML 的換行，防止格式崩潰
-    report_text = ai_db.get("reports", {}).get(ticker, "🤖 分析同步中...")
-    report_html = report_text.replace("\n", "<br>")
+    report_text = ai_db.get("reports", {}).get(ticker, "🤖 分析同步中...").replace("\n", "<br>")
 
-    # 數據預處理
-    p = str(d.get('price', '---'))
+    # 數據整理
+    price = str(d.get('price', '---'))
     pe = str(round(float(d.get('pe', 0)), 2)) if d.get('pe') not in ['---', None] else '---'
     gr = str(d.get('growth', '---'))
     sup = str(d.get('support', '---'))
     pre = str(d.get('pressure', '---'))
 
-    # 定義模板 (使用 {{ }} 避開 CSS 大括號衝突)
-    template = """
-    <div style="background:#fff9f9; border-left:12px solid #e53935; padding:15px; border-radius:12px; margin-bottom:30px; border:1px solid #ffdde0; font-family: sans-serif;">
-        
+    # 使用 Python 的多行字串，這次不放在 st.markdown，改放在 components.html
+    html_content = f"""
+    <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin-bottom: 20px;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap: wrap;">
-            <div style="min-width: 200px;">
-                <h1 style="color:#b71c1c; margin:0; font-size:2em;">☢️ {name} ({ticker})</h1>
-                <div style="font-size:3em; font-weight:900; color:#b71c1c; margin:5px 0;">${price}</div>
-                <div style="font-size:0.9em; color:#555; margin-bottom:10px;">
-                    趨勢：💀 空頭排列 | <b style="color:#1a237e;">PE: {pe}</b> | <b style="color:#1a237e;">成長: {gr}</b>
+            <div>
+                <h1 style="color:#b71c1c; margin:0; font-size:24px;">☢️ {name} ({ticker})</h1>
+                <div style="font-size:42px; font-weight:900; color:#b71c1c; margin:5px 0;">${price}</div>
+                <div style="font-size:14px; color:#555;">
+                    趨勢：💀 空頭排列 | <b>PE: {pe}</b> | <b>成長: {gr}</b><br>
+                    乖離率: 1.62% | 機構: 12.8%
                 </div>
             </div>
-            <div style="background:#fbe9e7; padding:10px; border-radius:8px; width:100%; max-width:200px; font-size:0.8em; color:#d32f2f; border:1px solid #ffccbc; margin-bottom:10px;">
+            <div style="background:#fbe9e7; padding:10px; border-radius:8px; width:160px; font-size:12px; color:#d32f2f; border:1px solid #ffccbc;">
                 RSI: 53.4 | 籌碼: ☁️ 盤整 | 量比: 1.8x
             </div>
         </div>
 
-        <hr style="border:0.5px solid #ffcdd2; margin:10px 0;">
+        <hr style="border:0.5px solid #ffcdd2; margin:15px 0;">
 
-        <div style="background:white; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap:10px;">
-                <div style="flex:1; min-width:140px; text-align:center; border-right:1px solid #eee;">
-                    <span style="color:#2e7d32; font-size:0.85em; font-weight:bold;">🟢 觀察買點</span><br>
-                    <b style="color:#2e7d32; font-size:1.4em;">74.16</b>
-                </div>
-                <div style="flex:1; min-width:140px; text-align:center; border-right:1px solid #eee;">
-                    <span style="color:#c62828; font-size:0.85em; font-weight:bold;">🎯 壓力位</span><br>
-                    <b style="color:#c62828; font-size:1.4em;">{pressure}</b>
-                </div>
-                <div style="flex:1.5; min-width:200px; padding-left:10px;">
-                    <b style="color:#333; font-size:0.9em;">⚙️ 風控與成本：</b><br>
-                    <span style="color:#1565c0; font-size:0.85em;">防守點: {support}</span><br>
-                    <span style="color:#c62828; font-size:0.85em;">ATR地板: 68.41</span>
-                </div>
+        <div style="background:white; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap:10px;">
+            <div style="flex:1; min-width:100px; text-align:center; border-right:1px solid #eee;">
+                <span style="color:#2e7d32; font-size:12px; font-weight:bold;">🟢 觀察買點</span><br>
+                <b style="color:#2e7d32; font-size:20px;">74.16</b>
+            </div>
+            <div style="flex:1; min-width:100px; text-align:center; border-right:1px solid #eee;">
+                <span style="color:#c62828; font-size:12px; font-weight:bold;">🎯 壓力位</span><br>
+                <b style="color:#c62828; font-size:20px;">{pre}</b>
+            </div>
+            <div style="flex:1.5; min-width:150px; padding-left:10px;">
+                <b style="color:#333; font-size:14px;">⚙️ 風控與成本：</b><br>
+                <span style="color:#1565c0; font-size:13px;">防守點: {sup}</span><br>
+                <span style="color:#c62828; font-size:13px;">ATR地板: 68.41</span>
             </div>
         </div>
 
-        <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:10px;">
-            <b style="font-size:1.1em; color:#333;">🧠 智權診斷 (AI 版)：</b>
-            <div style="margin-top:10px; font-size:1.05em; line-height:1.6; color:#444;">
-                {report}
+        <div style="background:rgba(255,255,255,0.8); padding:15px; border-radius:10px;">
+            <b style="font-size:16px; color:#333;">🧠 智權診斷 (AI 版)：</b>
+            <div style="margin-top:8px; font-size:15px; line-height:1.6; color:#444;">
+                {report_html}
             </div>
         </div>
     </div>
     """
+    # 關鍵：使用 components.html 確保 HTML 獨立渲染，不被 Streamlit 破壞
+    components.html(html_content, height=450, scrolling=True)
 
-    # 使用 .format() 填充，這樣就不會被 Python f-string 的大括號邏輯干擾
-    full_html = template.format(
-        name=name, ticker=ticker, price=p, pe=pe, gr=gr, 
-        pressure=pre, support=sup, report=report_html
-    )
-    
-    st.markdown(full_html, unsafe_allow_html=True)
-
-# 每 60 秒刷新一次
+# 60秒自動刷新
 time.sleep(60)
 st.rerun()
