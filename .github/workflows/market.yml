@@ -1,8 +1,12 @@
 name: 60s Market Monitor
+
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 消除 Node.js 警告
 
 jobs:
   update:
@@ -10,22 +14,33 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4  # 升級到 v4
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v5 # 升級到 v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+
       - name: Install deps
         run: pip install yfinance pandas
+
       - name: Run Fetcher
         run: python fetcher.py
-      - name: Push
+
+      - name: Push Data
         env:
           TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "MarketBot"
+          
+          # 先拉取遠端最新變動，防止衝突
           git pull --rebase origin main
+          
           git add data_raw.json
-          git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
-          git push origin main
+          # 檢查是否有變動，避免空的 commit 報錯
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin main || (git pull --rebase origin main && git push origin main)
+          fi
