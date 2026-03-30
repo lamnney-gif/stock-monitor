@@ -243,7 +243,9 @@ with st.spinner('同步數據與 AI 運算中...'):
                 {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
-
+# --- [關鍵] 加入 1.5 秒緩衝，防止 Groq 斷線 ---
+            time.sleep(1.5)
+        
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
