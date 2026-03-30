@@ -9,6 +9,7 @@ from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
+import requests
 
 # 1. 頁面與 Session 配置 (防封鎖核心)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 抗封鎖穩定版", layout="wide")
