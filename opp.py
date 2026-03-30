@@ -65,10 +65,6 @@ with col_status2:
         else:
             st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
             
-        if raw_rem > 0:
-            st.success(f"📈 行情下次更新：{raw_rem//60} 分 {raw_rem%60} 秒後")
-        else:
-            st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
