@@ -1,9 +1,9 @@
 import streamlit as st
 import json
 import os
+import time
 from datetime import datetime
 from string import Template
-from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="測試戰情室v.1", layout="wide")
 
@@ -18,6 +18,7 @@ raw_db, ai_db = load_data()
 
 # --- 2. 頂部狀態列 ---
 col_refresh, col_ai, col_market = st.columns(3)
+refresh_timer = col_refresh.empty()  # 用於倒數秒顯示
 
 def get_countdown(time_str, limit_mins):
     if time_str == "---" or not time_str: return None
@@ -30,22 +31,19 @@ def get_countdown(time_str, limit_mins):
     except:
         return None
 
-with col_ai:
-    ai_rem = get_countdown(ai_db.get("last_update", ""), 240)  # 4 小時
-    if ai_rem:
-        st.info(f"🤖 AI 下次改版：{ai_rem // 3600}時 {(ai_rem % 3600) // 60}分後")
-    else:
-        st.info("🤖 AI 診斷同步中")
+# AI 倒數 (4小時)
+ai_rem = get_countdown(ai_db.get("last_update", ""), 240)
+if ai_rem:
+    col_ai.info(f"🤖 AI 下次改版：{ai_rem // 3600}時 {(ai_rem % 3600) // 60}分後")
+else:
+    col_ai.info("🤖 AI 診斷同步中")
 
-with col_market:
-    raw_rem = get_countdown(raw_db.get("last_update", ""), 15)  # 15 分鐘
-    if raw_rem:
-        st.success(f"📈 行情更新倒數：{raw_rem // 60} 分 {raw_rem % 60} 秒")
-    else:
-        st.success("📈 行情更新中")
-
-with col_refresh:
-    refresh_timer = st.empty()
+# 行情倒數 (15 分鐘)
+raw_rem = get_countdown(raw_db.get("last_update", ""), 15)
+if raw_rem:
+    col_market.success(f"📈 行情更新倒數：{raw_rem // 60} 分 {raw_rem % 60} 秒")
+else:
+    col_market.success("📈 行情更新中")
 
 # --- 3. 授權檢查 ---
 if "auth" not in st.session_state: st.session_state["auth"] = False
@@ -92,27 +90,29 @@ CARD_STYLE = Template("""
 """)
 
 # --- 5. 數據渲染 ---
-ticker_list = ["2330.TW", "NVDA", "MU", "000660.KS", "2303.TW", "6770.TW", "2344.TW", "3481.TW", "1303.TW"]
-names = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
+ticker_list = ["2330.TW","NVDA","MU","000660.KS","2303.TW","6770.TW","2344.TW","3481.TW","1303.TW"]
+names = {"2330.TW":"台積電","NVDA":"輝達","MU":"美光","000660.KS":"海力士","2303.TW":"聯電","6770.TW":"力積電","2344.TW":"華邦電","3481.TW":"群創","1303.TW":"南亞"}
 
 for tk in ticker_list:
     d = raw_db.get("stocks", {}).get(tk, {})
     report_content = ai_db.get("reports", {}).get(tk, "🤖 分析同步中...")
-    report_clean = str(report_content).replace("\n", "<br>").replace("'", "&apos;")
+    report_clean = str(report_content).replace("\n","<br>").replace("'","&apos;")
 
     html_output = CARD_STYLE.safe_substitute(
         NAME=names.get(tk, tk), TICKER=tk,
-        PRICE=str(d.get('price', '---')), PE=str(d.get('pe', '---')),
-        GROWTH=str(d.get('growth', '---')), RSI=str(d.get('rsi', '---')),
-        CHIPS=str(d.get('chips', '---')), VOL_RATIO=str(d.get('volume_ratio', '---')),
-        BUY_POINT=str(d.get('buy_point', '---')), SUPPORT=str(d.get('stop_profit_line', '---')),
-        PRESSURE=str(d.get('pressure', '---')), ATR=str(d.get('dynamic_stop', '---')),
-        TURNOVER=str(d.get('turnover_zone', '---')), REPORT=report_clean
+        PRICE=str(d.get('price','---')), PE=str(d.get('pe','---')),
+        GROWTH=str(d.get('growth','---')), RSI=str(d.get('rsi','---')),
+        CHIPS=str(d.get('chips','---')), VOL_RATIO=str(d.get('volume_ratio','---')),
+        BUY_POINT=str(d.get('buy_point','---')), SUPPORT=str(d.get('stop_profit_line','---')),
+        PRESSURE=str(d.get('pressure','---')), ATR=str(d.get('dynamic_stop','---')),
+        TURNOVER=str(d.get('turnover_zone','---')), REPORT=report_clean
     )
     st.markdown(html_output, unsafe_allow_html=True)
 
-# --- 6. 自動刷新 ---
-# 每 60 秒刷新一次頁面
-count = st_autorefresh(interval=60*1000, limit=None, key="auto_refresh")
-seconds_left = 60 - (count % 60)
-refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{seconds_left} 秒")
+# --- 6. 真正倒數刷新 ---
+# 倒數 60 秒，然後刷新頁面
+for i in range(60, 0, -1):
+    refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{i} 秒")
+    time.sleep(1)
+
+st.experimental_rerun()  # 到 0 秒自動刷新
