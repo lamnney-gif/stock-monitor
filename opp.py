@@ -43,7 +43,7 @@ CARD_STYLE = Template("""
         <div>
             <h2 style="color:#b71c1c; margin:0; font-size:1.8em;">☢️ $NAME ($TICKER)</h2>
             <div style="font-size:3.5em; font-weight:900; color:#b71c1c; margin:5px 0;">$$$PRICE</div>
-            <div style="font-size:0.9em; color:#555;">趨勢：💀 空頭排列 | <b>PE: $PE</b> | <b>成長: $GROWTH</b></div>
+            <div style="font-size:0.9em; color:#555;">趨勢：💀 空頭排列 | <b>本益比PE: $PE</b> | <b>營收成長: $GROWTH</b></div>
         </div>
         <div style="background:#fbe9e7; padding:12px; border-radius:8px; width:160px; font-size:0.85em; color:#d32f2f; border:1px solid #ffccbc;">
             RSI: $RSI | 籌碼: $CHIPS | 量比: $VOL_RATIO
