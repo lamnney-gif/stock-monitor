@@ -147,7 +147,7 @@ def get_ai_analysis_safe(name, price, rsi, chip_flow, trend, pe, rev, news_list)
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}],
-                timeout=10 # 快速超時，不要卡住
+                timeout=8 # 快速超時，不要卡住
             )
             return "🔥 策略室： " + completion.choices[0].message.content
         except Exception as e:
