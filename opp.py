@@ -147,7 +147,7 @@ def get_ai_analysis_safe(name, price, rsi, chip_flow, trend, pe, rev, news_list)
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}],
-                timeout=5 # 快速超時，不要卡住
+                timeout=10 # 快速超時，不要卡住
             )
             return "🔥 策略室： " + completion.choices[0].message.content
         except Exception as e:
@@ -321,5 +321,5 @@ for d in data_list:
     """, unsafe_allow_html=True)
 for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
-    time.sleep(180)
+    time.sleep(300)
 st.rerun()
