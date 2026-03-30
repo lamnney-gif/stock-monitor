@@ -5,52 +5,52 @@ on:
     - cron: '0 */4 * * *'
   workflow_dispatch:
 
-# 🟢 只設這一個，解決 Node.js 警告
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      # 🟢 關鍵 1：抓取完整歷史，防止 pull --rebase 時找不到基準點 (解決 128)
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
+      - name: Install deps
+        run: pip install groq pandas
+
       - name: Run AI
         env:
-          # 🟢 傳入你的兩把鑰匙
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
           GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
-        run: |
-          pip install groq pandas
-          python analyzer.py
+        run: python analyzer.py
 
-      - name: Push Results
+      - name: Force Push AI Results
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 解決 128 錯誤與更新無效：強制拉取遠端最新檔案
-          git pull origin main --rebase
+          # 🟢 關鍵 2：暴力解決 Exit Code 128
+          # 先清理可能鎖死的索引，再強制拉取遠端最新動態
+          git gc --prune=now
+          git remote update
           
-          git add analysis_results.json
-          
-          # 檢查是否有真正的差異
-          if git diff --staged --quiet; then
-            echo "No changes detected, skipping push."
-          else
-            git commit -m "🧠 AI Strategy Updated: $(date +'%Y-%m-%d %H:%M')"
-            # 暴力推播 5 次，直到成功
-            for i in {1..5}; do
-              git push origin main && exit 0 || (git pull --rebase origin main && sleep 5)
-            done
-          fi
+          for i in {1..5}; do
+            git pull --rebase origin main
+            git add analysis_results.json
+            
+            # 如果沒變動就直接退出，不報錯
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+              exit 0
+            fi
+            
+            git commit -m "🧠 AI Update: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin main && exit 0 || (sleep 10 && git pull --rebase origin main)
+          done
