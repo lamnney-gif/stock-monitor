@@ -1,121 +1,86 @@
 {
+    "last_update": "2026-03-30 20:18:51",
     "stocks": {
         "2330.TW": {
             "price": 1780.0,
+            "rsi": 0.0,
             "pe": 26.867924,
-            "growth": "20.5%",
-            "rsi": 42.82,
-            "volume_ratio": 1.49,
-            "chips": "☁️ 盤整",
-            "support": 1718.7,
-            "pressure": 1841.3,
-            "atr": 40.87,
-            "turnover_zone": 1744.4,
-            "buy_point": 1753.07
+            "volume_ratio": 1.39,
+            "support": 1691.0,
+            "pressure": 1869.0,
+            "turnover_zone": 1744.4
         },
         "NVDA": {
             "price": 167.52,
+            "rsi": 23.77,
             "pe": 34.11813,
-            "growth": "73.2%",
-            "rsi": 31.42,
-            "volume_ratio": 1.06,
-            "chips": "☁️ 盤整",
-            "support": 160.25,
-            "pressure": 174.79,
-            "atr": 4.85,
-            "turnover_zone": 164.17,
-            "buy_point": 163.46
+            "volume_ratio": 1.12,
+            "support": 159.14,
+            "pressure": 175.9,
+            "turnover_zone": 164.17
         },
         "MU": {
             "price": 357.22,
+            "rsi": 4.21,
             "pe": 16.865911,
-            "growth": "196.3%",
-            "rsi": 42.25,
-            "volume_ratio": 0.83,
-            "chips": "☁️ 盤整",
-            "support": 311.28,
-            "pressure": 403.16,
-            "atr": 30.63,
-            "turnover_zone": 350.08,
-            "buy_point": 317.51
+            "volume_ratio": 0.89,
+            "support": 339.36,
+            "pressure": 375.08,
+            "turnover_zone": 350.08
         },
         "000660.KS": {
             "price": 873000.0,
+            "rsi": 0.0,
             "pe": "---",
-            "growth": "66.1%",
-            "rsi": 43.79,
-            "volume_ratio": 1.12,
-            "chips": "☁️ 盤整",
-            "support": 792120.15,
-            "pressure": 953879.85,
-            "atr": 53919.9,
-            "turnover_zone": 855540.0,
-            "buy_point": 807962.55
+            "volume_ratio": 1.0,
+            "support": 829350.0,
+            "pressure": 916650.0,
+            "turnover_zone": 855540.0
         },
         "2303.TW": {
             "price": 57.0,
+            "rsi": 0.0,
             "pe": 17.220545,
-            "growth": "2.4%",
-            "rsi": 38.96,
-            "volume_ratio": 1.23,
-            "chips": "☁️ 盤整",
-            "support": 54.16,
-            "pressure": 59.84,
-            "atr": 1.89,
-            "turnover_zone": 55.86,
-            "buy_point": 55.24
+            "volume_ratio": 1.24,
+            "support": 54.15,
+            "pressure": 59.85,
+            "turnover_zone": 55.86
         },
         "6770.TW": {
             "price": 58.1,
+            "rsi": 0.0,
             "pe": "---",
-            "growth": "12.3%",
-            "rsi": 45.08,
-            "volume_ratio": 0.74,
-            "chips": "☁️ 盤整",
-            "support": 50.6,
-            "pressure": 65.6,
-            "atr": 5.0,
-            "turnover_zone": 56.94,
-            "buy_point": 51.61
+            "volume_ratio": 0.76,
+            "support": 55.2,
+            "pressure": 61.0,
+            "turnover_zone": 56.94
         },
         "2344.TW": {
             "price": 93.0,
+            "rsi": 10.19,
             "pe": 105.681816,
-            "growth": "42.4%",
-            "rsi": 41.2,
-            "volume_ratio": 0.84,
-            "chips": "☁️ 盤整",
-            "support": 78.39,
-            "pressure": 107.61,
-            "atr": 9.74,
-            "turnover_zone": 91.14,
-            "buy_point": 79.96
+            "volume_ratio": 0.83,
+            "support": 88.35,
+            "pressure": 97.65,
+            "turnover_zone": 91.14
         },
         "3481.TW": {
             "price": 24.6,
+            "rsi": 0.0,
             "pe": 820.00006,
-            "growth": "5.7%",
-            "rsi": 41.5,
-            "volume_ratio": 0.71,
-            "chips": "☁️ 盤整",
-            "support": 21.32,
-            "pressure": 27.88,
-            "atr": 2.18,
-            "turnover_zone": 24.11,
-            "buy_point": 21.75
+            "volume_ratio": 0.76,
+            "support": 23.37,
+            "pressure": 25.83,
+            "turnover_zone": 24.11
         },
         "1303.TW": {
             "price": 81.4,
+            "rsi": 80.0,
             "pe": 142.80702,
-            "growth": "-5.4%",
-            "rsi": 53.54,
-            "volume_ratio": 2.29,
-            "chips": "☁️ 盤整",
-            "support": 74.09,
-            "pressure": 88.71,
-            "atr": 4.87,
-            "turnover_zone": 79.77,
-            "buy_point": 75.57
+            "volume_ratio": 1.88,
+            "support": 77.33,
+            "pressure": 85.47,
+            "turnover_zone": 79.77
         }
     }
 }
