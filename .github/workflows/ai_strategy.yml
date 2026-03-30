@@ -1,30 +1,32 @@
-- name: Push AI Results
+name: 4h AI Strategist
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install deps
+        run: pip install groq
+      - name: Run AI
+        env:
+          GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
+          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+        run: python analyzer.py
+      - name: Push
+        env:
+          TZ: Asia/Taipei
         run: |
-          # 基本設定
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
-          
-          # 1. 強制抓取最新狀態
-          git fetch origin main
-          
-          # 2. 嘗試合併，如果衝突就以「我現在生成的報告」為主
-          git checkout origin/main analysis_results.json || echo "First time file"
-          
-          # 3. 重新加入檔案
           git add analysis_results.json
-          
-          # 4. 提交並強制推播 (用 while 迴圈確保推成功)
-          if git diff --staged --quiet; then
-            echo "No changes"
-          else
-            git commit -m "🧠 AI Strategy Updated"
-            # 這是絕招：如果推失敗，就先 rebase 再推，重複到成功為止
-            n=0
-            until [ "$n" -ge 5 ]
-            do
-               git push origin main && break
-               n=$((n+1))
-               git pull --rebase origin main
-               sleep 2
-            done
-          fi
+          git commit -m "🧠 AI 戰略報告更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
