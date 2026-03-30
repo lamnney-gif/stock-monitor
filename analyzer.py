@@ -1,50 +1,52 @@
 import json
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from groq import Groq
 
-def get_tw_time():
-    return datetime.utcnow() + timedelta(hours=8)
-
 def run_ai():
-    # 1. 讀取數據 (確保路徑正確)
-    if not os.path.exists("data_raw.json"): 
-        print("❌ 找不到 data_raw.json")
+    # 1. 確保路徑正確
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    raw_path = os.path.join(base_path, "data_raw.json")
+    save_path = os.path.join(base_path, "analysis_results.json")
+
+    if not os.path.exists(raw_path): 
+        print(f"❌ 找不到 {raw_path}")
         return
     
-    with open("data_raw.json", "r", encoding="utf-8") as f:
+    with open(raw_path, "r", encoding="utf-8") as f:
         raw = json.load(f)
     
-    # 2. 準備 API Keys
+    # 2. 準備兩把 API Keys
     keys = [os.getenv("GROQ_API_KEY_1"), os.getenv("GROQ_API_KEY_2")]
     keys = [k for k in keys if k]
     if not keys:
-        print("❌ 找不到任何 GROQ_API_KEY")
+        print("🚨 錯誤：找不到任何 GROQ_API_KEY")
         return
 
-    # 對應名稱 (因為 data_raw 裡沒存名稱)
     names = {
         "2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", 
         "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", 
         "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"
     }
     
-    results = {"last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "reports": {}}
+    # 存檔時間點：直接用系統當下時間，不做任何時區加減
+    results = {
+        "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
+        "reports": {}
+    }
+    
     key_idx = 0
-
-    # 確保抓取的是 raw["stocks"]
     stocks_data = raw.get("stocks", {})
     
+    # 3. 開始 AI 分析
     for ticker, data in stocks_data.items():
-        name = names.get(ticker, ticker) # 修正：從對照表抓名稱，抓不到就用代號
+        name = names.get(ticker, ticker)
         success = False
         
         while key_idx < len(keys) and not success:
             try:
                 client = Groq(api_key=keys[key_idx])
-                
-                # 修正 Prompt 中的變數抓取
                 price = data.get('price', '---')
                 pe = data.get('pe', '---')
                 growth = data.get('growth', '---')
@@ -59,26 +61,19 @@ def run_ai():
                     ]
                 )
                 
-                content = chat.choices[0].message.content
-                results["reports"][ticker] = content
+                results["reports"][ticker] = chat.choices[0].message.content
                 success = True
-                print(f"✅ {name} ({ticker}) AI 分析成功")
-                
-                # 稍微加長一點延遲，避免 API Rate Limit (429 Error)
-                time.sleep(2) 
+                print(f"✅ {name} 分析成功 (Key {key_idx+1})")
+                time.sleep(2) # 避免觸發頻率限制
                 
             except Exception as e:
-                print(f"⚠️ Key {key_idx+1} 報錯: {e}")
+                print(f"⚠️ Key {key_idx+1} 報錯，嘗試切換...")
                 key_idx += 1
-                if key_idx < len(keys):
-                    print(f"🔄 嘗試切換至 Key {key_idx+1}")
-                else:
-                    print("🚨 所有 API Key 已耗盡或皆報錯")
 
-    # 3. 強制存檔 (這步最重要)
-    with open("analysis_results.json", "w", encoding="utf-8") as f:
+    # 4. 強制存檔
+    with open(save_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
-    print(f"🏁 全部分析完成，已更新 analysis_results.json")
+    print(f"🏁 全部分析完成，存檔點: {results['last_update']}")
 
 if __name__ == "__main__":
     run_ai()
