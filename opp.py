@@ -156,23 +156,20 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     
     if ai_engines["groq"]:
         try:
-            # 加入超時控制
-            completion = ai_engines["groq"].chat.completions.create(...)
-            result = completion.choices[0].message.content
-            if result: return "🔥 策略室： " + result
-        except Exception as e:
-            print(f"Groq Error for {name}: {e}") # 在終端機看錯誤
-
-    # 嘗試 Gemini
+            completion = ai_engines["groq"].chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
+                          {"role": "user", "content": prompt}]
+            )
+            return "🔥 策略室： " + completion.choices[0].message.content
+        except: pass
+        
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
-            if res.text: return "🔮 戰略部： " + res.text
-        except Exception as e:
-            print(f"Gemini Error for {name}: {e}")
-
-    # 如果都失敗，不要回傳字串，改為 raise 讓 cache 不要存檔
-    raise ValueError("AI Engines Busy")
+            return "🔮 戰略部： " + res.text
+        except: return "⚠️ 分析師會議中 (API 忙碌)"
+    return "❌ 分析引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 0
