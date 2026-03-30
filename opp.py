@@ -24,8 +24,6 @@ col_time1, col_time2 = st.columns(2)
 
 with col_time1:
     # 這裡顯示的是 JSON 裡的靜態時間，代表數據新鮮度
-    m_up = raw_db.get("last_update", "等待同步...")
-    st.metric("💹 行情數據存檔時間 (台北)", m_up)
     refresh_timer = st.empty()
 
 with col_time2:
