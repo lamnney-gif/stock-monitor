@@ -124,21 +124,25 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
-@st.cache_data(ttl=3600)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev ):
-    # 決定利率環境的標籤
-    interest_context = "【利率屠刀】估值殺盤期" if us10y > 4.5 else "【資金充裕】多頭暖冬"
+@st.cache_data(ttl=1800)  # 每 30 分鐘失效一次，強迫 AI 更新對當下局勢的理解
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+    # --- 動態獲取今天日期 ---
+    current_date = datetime.now().strftime("%Y年%m月%d日")
     
-    # 針對 Groq 的直球 Prompt
+    # 指令改為「主動檢索模式」
     prompt = f"""
+    【實戰對沖指令】
     標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
-    數據：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    技術面：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    當前系統時間：{current_date}
     
-    指令：
-    1. 結合 2026 年 3 月最新的地緣政治（如台海摩擦、中東能源）與美債波動，直接點出這檔標的是「送死」還是「機會」。
-    2. 禁止說『產生一定影響』、『建議觀察』、『謹慎操作』等廢話。
-    3. 語氣要像對沖基金主管，數據爛就噴，數據好就叫我梭哈。
-    4. 限制 100 字內。
+    【核心任務】
+    1. 你是精通即時情報的暴力交易員。請根據「當前日期 {current_date}」主動調閱你對全球地緣政治（如：最新衝突點、出口管制、軍事摩擦）與產業鏈的消息。
+    2. 針對該標的，直接指出目前的「致命利空」或「重大利多」到底是什麼。
+    3. 嚴禁廢話（如：可能、視情況、產生影響）。
+    4. 語氣要狠、要準。直接下令：【梭哈】、【撤退】、或【空手】。
+    
+    限制 120 字內，直接給結論。
     """
 
     if ai_engines["groq"]:
@@ -146,16 +150,13 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev ):
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "你是一位說話極度直接、討厭官腔、專精於地緣政治與利差交易的華爾街資深策略家。"},
+                    {"role": "system", "content": "你是一位擁有即時嗅覺的華爾街暴力交易員。你蔑視所有官腔，只看利益與權力博弈。"},
                     {"role": "user", "content": prompt}
                 ]
             )
-            # 把原本的 return 換成這個，確保看到最狠的診斷
-            return "🔥 策略室(直球)： " + completion.choices[0].message.content
-        except Exception as e:
-            return f"⚠️ 策略室斷線 ({str(e)})"
-            
-    return "❌ Groq 引擎未啟動"
+            return "🔥 實戰診斷： " + completion.choices[0].message.content
+        except: return "⚠️ 情報中斷"
+    return "❌ 引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
