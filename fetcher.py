@@ -30,21 +30,29 @@ def run_market():
             # --- 核心計算開始 ---
             price = round(df['Close'].iloc[-1], 2)
             
-            # 💡 關鍵修正：真正的 ATR (True Range) 邏輯
-            # TR 取三者最大：(當前高低差, 當前高與前收差, 當前低與前收差)
+            # --- 在 market.py 的計算邏輯中替換這一段 ---
+
+            # 1. 計算 TR (True Range)
             hl = df['High'] - df['Low']
             hc = np.abs(df['High'] - df['Close'].shift())
             lc = np.abs(df['Low'] - df['Close'].shift())
             tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
-            
-            # 計算 14 日平均真實波幅 (ATR)
-            atr_val = tr.rolling(14).mean().iloc[-1]
-            atr_val = round(atr_val, 2) if not pd.isna(atr_val) else round(price * 0.03, 2)
-            
-            # 基於 ATR 的動態支撐壓力 (1.5 倍 ATR 是標準風控距離)
-            support = round(price - (atr_val * 1.5), 2)
-            pressure = round(price + (atr_val * 1.5), 2)
-            buy_point = round(price - (atr_val * 1.2), 2)
+
+            # 2. 縮短 ATR 週期到 5 天 (反應更靈敏)
+            atr_fast = tr.rolling(5).mean().iloc[-1]
+
+            # 3. 💡 增加「保底波幅」邏輯：
+            # 如果算出來的 ATR 太小（低於股價 3.5%），強制給予 3.5% 的波幅作為風險緩衝
+            min_volatility = price * 0.035 
+            final_atr = max(atr_fast, min_volatility)
+
+            # 4. 重新定義支撐與壓力 (改用 2 倍 ATR 確保安全距離)
+            support = round(price - (final_atr * 2.0), 2)  # 空頭排列，防守要深
+            pressure = round(price + (final_atr * 1.5), 2)
+            buy_point = round(price - (final_atr * 1.5), 2)
+
+            # 寫入 JSON 的數值
+            atr_val = round(final_atr, 2)
             
             # RSI 計算
             delta = df['Close'].diff()
