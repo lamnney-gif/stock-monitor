@@ -24,6 +24,8 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "MarketBot"
+          # 關鍵：先拉回 AI 報告，再推行情數據
+          git pull --rebase origin main
           git add data_raw.json
           git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
           git push
