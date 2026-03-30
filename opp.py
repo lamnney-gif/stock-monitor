@@ -27,7 +27,10 @@ tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS"
 
 for ticker, name in tickers.items():
     d = raw_db.get("stocks", {}).get(ticker, {})
-    report_text = ai_db.get("reports", {}).get(ticker, "🤖 分析同步中...").replace("\n", "<br>")
+    
+    # 修正變數名稱：確保這裡定義的 report_html 供下方使用
+    report_raw = ai_db.get("reports", {}).get(ticker, "🤖 分析同步中...")
+    report_html = report_raw.replace("\n", "<br>")
 
     # 數據整理
     price = str(d.get('price', '---'))
@@ -36,9 +39,9 @@ for ticker, name in tickers.items():
     sup = str(d.get('support', '---'))
     pre = str(d.get('pressure', '---'))
 
-    # 使用 Python 的多行字串，這次不放在 st.markdown，改放在 components.html
+    # 使用 iframe 渲染，徹底解決 HTML 標籤噴出的問題
     html_content = f"""
-    <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin-bottom: 20px;">
+    <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: -apple-system, sans-serif; margin-bottom: 20px;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap: wrap;">
             <div>
                 <h1 style="color:#b71c1c; margin:0; font-size:24px;">☢️ {name} ({ticker})</h1>
@@ -79,8 +82,8 @@ for ticker, name in tickers.items():
         </div>
     </div>
     """
-    # 關鍵：使用 components.html 確保 HTML 獨立渲染，不被 Streamlit 破壞
-    components.html(html_content, height=450, scrolling=True)
+    # 調整高度確保能完整顯示紅框內容
+    components.html(html_content, height=520, scrolling=True)
 
 # 60秒自動刷新
 time.sleep(60)
