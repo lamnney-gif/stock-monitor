@@ -16,32 +16,21 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列與倒數計時 ---
-now_tw = datetime.utcnow() + timedelta(hours=8)
-col_time1, col_time2 = st.columns(2)
+# --- 2. 狀態列與狀態顯示 (移除倒數邏輯) ---
+col_status1, col_status2 = st.columns(2)
 
-with col_time1:
-    refresh_timer = st.empty() # 只留刷新倒數，行情存檔時間已刪
+with col_status1:
+    # 保持原本的 60 秒網頁自動刷新倒數
+    refresh_timer = st.empty() 
 
-with col_time2:
-    ai_last_time_str = ai_db.get("last_update", "---").strip()
-    if ai_last_time_str != "---":
-        try:
-            last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
-            next_dt = last_dt + timedelta(hours=4)
-            # 計算差距（秒）
-            diff_seconds = int((next_dt - now_tw).total_seconds())
-            
-            if 0 < diff_seconds <= 14400:
-                hrs = diff_seconds // 3600
-                mins = (diff_seconds % 3600) // 60
-                st.info(f"🤖 AI 下次改版倒數: {hrs}時 {mins}分")
-            else:
-                # 💡 這裡加入診斷資訊，幫你抓出為什麼變咖啡色
-                st.warning(f"⏳ 同步中... (偏離值: {diff_seconds}秒)")
-                # 如果偏離太誇張（比如負好幾萬秒），代表時區設錯了
-        except Exception as e:
-            st.error(f"⚠️ 格式錯誤: {e}")
+with col_status2:
+    # 只要讀得到 AI 報告的內容，就顯示正常的綠色狀態
+    if ai_db.get("reports") and len(ai_db["reports"]) > 0:
+        # 顯示最後更新時間作為參考，但不參與倒數計算
+        last_t = ai_db.get("last_update", "---")
+        st.success(f"✅ AI 診斷：已接入最新市場報告 (存檔點: {last_t})")
+    else:
+        st.info("🤖 AI 診斷：等待雲端數據同步中...")
 
 # --- 3. 免責聲明 ---
 st.markdown("""
