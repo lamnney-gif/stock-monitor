@@ -69,6 +69,10 @@ for ticker, name in tickers.items():
         <div style="background:rgba(255,255,255,0.8); padding:15px; border-radius:10px;">
             <b style="font-size:1.1em; color:#333;">🧠 智權診斷 (AI 版)：</b>
             <div style="margin-top:10px; font-size:1em; line-height:1.6; color:#444;">{report_fixed}</div>
+
+        <div style="background:#f9f9f9; padding:12px; border-radius:8px; border:1px dashed #ccc; font-size:0.8em; color:#777; line-height:1.4;">
+            <b>⚠️ 免責聲明：</b><br>
+            本頁面所提供之所有資訊（包含 AI 自動生成之診斷報告、技術指標預測及成本模擬數據）僅供參考，不構成任何投資建議、邀約或推薦。投資者應自行評估市場風險，並對其投資決策負完全法律責任。半導體市場波動劇烈，過往績效不代表未來結果。
         </div>
     </div>
     """, unsafe_allow_html=True)
