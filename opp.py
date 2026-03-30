@@ -16,32 +16,33 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 3. 狀態列 (變數：refresh_timer) ---
-col_left, col_right = st.columns([1, 2])
+# --- 2. 狀態列 (變數統一為 refresh_timer) ---
+col_refresh, col_status = st.columns([1, 2])
 
-with col_left:
-    # 這裡就是你消失的 60 秒刷新
+with col_refresh:
+    # 💡 這裡定義 refresh_timer，保證 60 秒刷新會顯示
     refresh_timer = st.empty()
 
-with col_right:
+with col_status:
     raw_time_str = raw_db.get("last_update", "---").strip()
     
     if raw_time_str != "---":
         try:
-            # 1. 解析檔案時間
+            # 解析 JSON 裡的時間 (03:06:58)
             last_dt = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
-            # 2. 計算秒數差 (取絕對值，無視誰減誰)
+            # 計算與現在的秒數差 (絕對值)
             diff_sec = abs(int((datetime.now() - last_dt).total_seconds()))
             
-            # 3. 💡 終極大招：15 分鐘取餘數 (900秒)
-            # 這樣管你時差幾小時，餘數永遠會落在 0~899 秒之間
-            rem_sec = 900 - (diff_sec % 900)
+            # 💡 核心：取 15 分鐘 (900秒) 的餘數。不管差幾小時，只看這 15 分鐘輪到哪
+            passed_in_cycle = diff_sec % 900
+            rem_sec = 900 - passed_in_cycle
             
-            # 顯示倒數
-            st.success(f"📈 行情下次更新預計：{rem_sec // 60} 分 {rem_sec % 60} 秒後")
-            st.caption(f"數據基準點：{raw_time_str} (目前系統時間: {datetime.now().strftime('%H:%M:%S')})")
-        except Exception as e:
-            st.error(f"時間計算錯誤: {e}")
+            if diff_sec > 1200: # 如果超過 20 分鐘沒更新 (900s + 緩衝)
+                st.error(f"⚠️ 行情更新延遲中 (最後存檔: {raw_time_str})")
+            else:
+                st.success(f"📈 行情下次更新預計：{rem_sec // 60} 分 {rem_sec % 60} 秒後")
+        except:
+            st.warning("等待行情數據中...")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
