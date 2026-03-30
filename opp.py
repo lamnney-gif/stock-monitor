@@ -72,5 +72,5 @@ for ticker, name in tickers.items():
     """, unsafe_allow_html=True)
 
 # 顯示端只需要 10 分鐘同步一次即可
-time.sleep(600)
+time.sleep(60)
 st.rerun()
