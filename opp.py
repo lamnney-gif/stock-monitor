@@ -164,7 +164,7 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     raise Exception("AI API Limit reached")
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
-    score = 50
+    score = 60
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
     elif vix > 28: score -= 30
@@ -315,5 +315,5 @@ for d in data_list:
     """, unsafe_allow_html=True)
 for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
-    time.sleep(1)
+    time.sleep(180)
 st.rerun()
