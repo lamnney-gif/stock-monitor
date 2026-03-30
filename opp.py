@@ -129,34 +129,22 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
     from datetime import datetime
     current_date = datetime.now().strftime("%Y年%m月%d日")
     
-    # 這裡的 System Prompt 是靈魂，賦予它「產業常識」
-    system_message = """
-    你是一位華爾街傳奇對沖基金經理，專精循環產業與半導體地緣政治。
-    你說話刻薄但極其精準，能一眼看穿財務報表背後的謊言。
-    你的任務是：不要覆述數據，要『解讀』數據背後的災難或機會。
-    """
-    
-    # User Prompt 加入對比與產業聯想邏輯
+    # 強制任務與加分任務的 Prompt
     prompt = f"""
-    標的：{name} | 現價:{price} | PE:{pe} | 營收成長:{rev}% | 趨勢:{trend} | 籌碼:{chip_flow}
+    標的：{name} | 現價:{price} | PE:{pe} | 成長:{rev}% | 籌碼:{chip_flow} | 趨勢:{trend}
     時間：{current_date}
-
-    【強制推理順序（不可跳過）】
-    1. 先判斷：PE vs 成長 是否失衡（高PE+負成長=什麼等級問題）
-    2. 再判斷：產業位置（復甦初期 / 反彈 / 衰退）
-    3. 再結合：2026地緣政治（必須具體點名事件）
-    4. 最後判斷：籌碼是主力進場還是出貨
-
-    【輸出規則】
-    - 不准解釋數據
-    - 每句話都要有「結論」
-    - 必須明確偏多或偏空（不能模糊）
-
-    【輸出格式】
-    【一句話死穴】：（直接定生死，例如：高PE配負成長=典型價值陷阱）
-    【消息面黑幕】：（產業+地緣政治+資金真相）
-
-    限制120字內
+    
+    【核心任務：不准廢話，直接給結論】
+    1. 判斷 PE vs 成長 是否失衡：直接定性（如：嚴重泡沫、獲利崩盤、極度低估）。
+    2. 判斷產業位置：三選一（反彈 / 衰退 / 復甦）。
+    3. 給最終決策：三選一（梭哈 / 砍單 / 空手）。
+    
+    【地緣政治與籌碼加分】
+    - 地緣政治一句話：直擊該產業目前的國際死穴。
+    - 籌碼一句話：判斷是主力換手還是散戶接盤。
+    
+    指令：嚴禁使用『根據、建議、採取、由於、因為』。語氣要狠、要準。
+    字數 150 字內。
     """
 
     if ai_engines["groq"]:
@@ -164,12 +152,12 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": system_message},
+                    {"role": "system", "content": "你是一位只看結果、蔑視廢話的華爾街對沖基金主管。你下達的是命令，不是分析報告。"},
                     {"role": "user", "content": prompt}
                 ]
             )
-            return "🕵️ 專業操盤： " + completion.choices[0].message.content
-        except: return "⚠️ 腦部斷線"
+            return "🎯 操盤手決策： " + completion.choices[0].message.content
+        except: return "⚠️ 斷線"
     return "❌ 沒引擎"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
