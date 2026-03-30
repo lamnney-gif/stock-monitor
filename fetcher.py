@@ -2,24 +2,7 @@
 import yfinance as yf
 import json
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import os
-
-def get_last_update():
-    """讀取上一筆 data_raw.json 的時間"""
-    if os.path.exists("data_raw.json"):
-        try:
-            with open("data_raw.json", "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return data.get("last_update", "N/A")
-        except:
-            return "N/A"
-    return "N/A"
-
-def get_tw_time():
-    """當前 UTC+8 時間，用作本次更新時間"""
-    return (datetime.utcnow() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+from datetime import datetime
 
 def calculate_rsi(series, period=14):
     """精準版 RSI 計算"""
@@ -36,31 +19,26 @@ def run_market():
         "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"
     }
 
-    last_update = get_last_update()
-    print(f"上次更新時間: {last_update}")
-
-    raw_results = {"last_update": get_tw_time(), "stocks": {}}
+    raw_results = {"last_update": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"), "stocks": {}}
 
     for sym, name in tickers.items():
         try:
             tk = yf.Ticker(sym)
             df = tk.history(period="1mo")
-            if df.empty: 
-                print(f"⚠️ {name} 無歷史資料，跳過")
-                continue
+            if df.empty: continue
 
             price = round(df['Close'].iloc[-1], 2)
             rsi_val = calculate_rsi(df['Close'], 14)
 
-            # 🔹 ATR 地板（極端止損）
+            # ATR地板
             atr_floor = (df['High'] - df['Low']).rolling(14).mean().iloc[-1]
             dynamic_stop = round(price - 2.5 * atr_floor, 2)
 
-            # 🔹 防守觀察點（高點回檔停利）
+            # 防守觀察點
             recent_high = df['Close'].rolling(5).max().iloc[-1]
             stop_profit_line = round(recent_high * 0.97, 2)
 
-            # 支撐與壓力
+            # 標準差支撐壓力
             std20 = df['Close'].rolling(20).std().iloc[-1]
             support = round(price - 1.5 * std20, 2)
             pressure = round(price + 1.5 * std20, 2)
@@ -70,7 +48,7 @@ def run_market():
             vol_avg = df['Volume'].iloc[-6:-1].mean()
             vol_ratio = round(df['Volume'].iloc[-1] / vol_avg, 2) if vol_avg > 0 else 1.0
 
-            # 籌碼邏輯
+            # 籌碼
             chip_flow = "🔥 強勢" if rsi_val > 60 else ("💀 轉弱" if rsi_val < 40 else "☁️ 盤整")
 
             # 基本面
@@ -94,16 +72,13 @@ def run_market():
                 "dynamic_stop": dynamic_stop,
                 "stop_profit_line": stop_profit_line
             }
-
-            print(f"✅ {name} 更新完成: 價格={price}, ATR地板={round(atr_floor,2)}, 防守觀察點={stop_profit_line}")
+            print(f"✅ {name} 更新完成: 價格={price}, ATR={round(atr_floor,2)}, 防守={stop_profit_line}")
 
         except Exception as e:
-            print(f"❌ {sym} 更新失敗: {e}")
+            print(f"❌ {sym} 錯誤: {e}")
 
-    # 輸出 JSON
     with open("data_raw.json", "w", encoding="utf-8") as f:
         json.dump(raw_results, f, ensure_ascii=False, indent=4)
-    print(f"📊 本次更新完成，保存至 data_raw.json")
 
 if __name__ == "__main__":
     run_market()
