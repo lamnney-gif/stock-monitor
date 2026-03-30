@@ -31,21 +31,24 @@ with col_status2:
     ai_time_str = ai_db.get("last_update", "---").strip()
     raw_time_str = raw_db.get("last_update", "---").strip()
 
-    def get_remaining_seconds(time_str, limit_minutes):
+   def get_remaining_seconds(time_str, limit_minutes):
         if time_str == "---" or not time_str: return None
         try:
-            # 1. 將字串轉為 datetime 物件
-            dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+            # 1. 直接解析字串 (不帶時區)
+            last_dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
             
-            # 2. 強制指定這串時間是 UTC (因為 GitHub Actions 在 UTC 跑)
-            dt_utc = dt.replace(tzinfo=timezone.utc)
+            # 2. 計算「現在時間」與「存檔時間」的差距 (分鐘)
+            # datetime.now() 是台北時間，last_dt 可能是 UTC
+            diff_mins = (datetime.now() - last_dt).total_seconds() / 60
             
-            # 3. 計算從存檔到「現在」經過了多少秒 (time.time() 是全球統一的)
-            elapsed_seconds = int(time.time() - dt_utc.timestamp())
+            # 💡 核心修正：如果差距大於 400 分鐘 (約 6.6 小時)，
+            # 說明這是一個 UTC vs 台北時間的時差，直接扣掉 480 分鐘 (8 小時)
+            if diff_mins > 400:
+                diff_mins -= 480
             
-            # 4. 剩餘秒數
-            remaining = (limit_minutes * 60) - elapsed_seconds
-            return remaining
+            # 3. 剩餘秒數 = (限制分鐘 - 已經過的分鐘) 轉成秒
+            remaining_sec = (limit_minutes - diff_mins) * 60
+            return int(remaining_sec)
         except:
             return None
 
@@ -53,17 +56,18 @@ with col_status2:
     ai_rem = get_remaining_seconds(ai_time_str, 240)
     if ai_rem is not None:
         if ai_rem > 0:
-            st.info(f"🤖 AI 下次改版：{int(ai_rem//3600)}時 {int((ai_rem%3600)//60)}分後")
+            st.info(f"🤖 AI 下次改版：{ai_rem//3600}時 {(ai_rem%3600)//60}分後")
         else:
-            st.warning(f"⏳ AI 同步中... (上次更新: {ai_time_str})")
+            st.warning(f"⏳ AI 同步中...")
 
     # --- B. 行情數據倒數 (15分鐘) ---
     raw_rem = get_remaining_seconds(raw_time_str, 15)
     if raw_rem is not None:
         if raw_rem > 0:
-            st.success(f"📈 行情下次更新：{int(raw_rem//60)} 分 {int(raw_rem%60)} 秒後")
+            # 這裡就會變回 15 分鐘內的正常數字了！
+            st.success(f"📈 行情下次更新：{raw_rem//60} 分 {raw_rem%60} 秒後")
         else:
-            st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
+            st.error(f"⚠️ 行情刷新延遲")
             
 # --- 3. 免責聲明 ---
 st.markdown("""
