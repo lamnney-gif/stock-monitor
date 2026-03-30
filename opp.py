@@ -21,10 +21,7 @@ from datetime import datetime, timezone
 
 # --- 2. 狀態列：精準倒數邏輯 ---
 col_status1, col_status2 = st.columns(2)
-
-with col_time1:
-    refresh_timer = st.empty() # 只留刷新倒數，行情存檔時間已刪
-    
+   
 with col_status2:
     ai_time_str = ai_db.get("last_update", "---").strip()
     raw_time_str = raw_db.get("last_update", "---").strip()
