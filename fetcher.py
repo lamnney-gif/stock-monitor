@@ -1,6 +1,5 @@
 import yfinance as yf
 import json
-import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -8,8 +7,19 @@ from datetime import datetime, timedelta
 def get_tw_time():
     return (datetime.utcnow() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
 
+# ✅ Wilder ATR（正確版本）
+def calculate_atr(df, period=14):
+    hl = df['High'] - df['Low']
+    hc = np.abs(df['High'] - df['Close'].shift())
+    lc = np.abs(df['Low'] - df['Close'].shift())
+    
+    tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
+    
+    # Wilder smoothing
+    atr = tr.ewm(alpha=1/period, adjust=False).mean()
+    return atr
+
 def run_market():
-    # 💡 區分市場，避免價格混亂
     tickers = {
         "2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", 
         "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", 
@@ -24,39 +34,36 @@ def run_market():
             df = tk.history(period="3mo")
             if df.empty: continue
             
-            # 💡 修正 1：價格獲取
             price = round(df['Close'].iloc[-1], 2)
             
-            # --- 💡 修正 2：ATR 真實波動計算 (TR 邏輯) ---
-            hl = df['High'] - df['Low']
-            hc = np.abs(df['High'] - df['Close'].shift())
-            lc = np.abs(df['Low'] - df['Close'].shift())
-            tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
-            atr_val = tr.rolling(14).mean().iloc[-1]
+            # ✅ 正確 ATR
+            df['ATR'] = calculate_atr(df)
+            atr_val = df['ATR'].iloc[-1]
             
-            # --- 💡 修正 3：針對「台股」與「美股」的不同波動率保底 ---
-            # 台股漲跌幅限制 10%，波動通常較美股小；美股無限制。
-            if ".TW" in sym:
-                # 台股邏輯：ATR 通常落在股價的 1.5% - 3%
-                min_vol = price * 0.02 
-                final_atr = round(max(atr_val, min_vol), 2)
+            # ✅ ATR 壓縮偵測（關鍵）
+            atr_mean = df['ATR'].rolling(20).mean().iloc[-1]
+            
+            # 如果 ATR 過低 → 視為盤整壓縮（避免被洗）
+            if atr_val < atr_mean * 0.8:
+                atr_effective = atr_val * 1.3   # 放大避免洗盤
+                atr_state = "⚠️ 壓縮"
             else:
-                # 美股邏輯：ATR 通常落在股價的 4% - 6%
-                min_vol = price * 0.05 
-                final_atr = round(max(atr_val, min_vol), 2)
-
-            # --- 💡 修正 4：支撐與壓力計算 (空頭排列防守加深) ---
-            # 1780 元如果是台股，ATR 80 元 (約 4.5%) 其實是合理的劇烈波動
-            support = round(price - (final_atr * 2.0), 2)
-            pressure = round(price + (final_atr * 1.5), 2)
-            buy_point = round(price - (final_atr * 1.5), 2)
+                atr_effective = atr_val
+                atr_state = "正常"
             
-            # RSI 與基本面
-            rsi_val = 50.0 # 預設
+            atr_effective = round(atr_effective, 2)
+            
+            # ✅ 支撐壓力（改良版）
+            support = round(price - (atr_effective * 2.2), 2)
+            pressure = round(price + (atr_effective * 1.8), 2)
+            buy_point = round(price - (atr_effective * 1.5), 2)
+            
+            # RSI
+            rsi_val = 50.0
             if len(df) >= 14:
                 delta = df['Close'].diff()
-                gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+                gain = (delta.where(delta > 0, 0)).ewm(alpha=1/14).mean()
+                loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14).mean()
                 rs = gain / loss
                 rsi_val = round(100 - (100 / (1 + rs.iloc[-1])), 2)
 
@@ -68,15 +75,17 @@ def run_market():
                 "pe": round(info.get('trailingPE', 0), 2) if info.get('trailingPE') else "---",
                 "growth": f"{info.get('revenueGrowth', 0)*100:.1f}%" if info.get('revenueGrowth') else "---",
                 "rsi": rsi_val,
-                "volume_ratio": round(df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean(), 2),
-                "chips": "🔥 強勢" if rsi_val > 60 else ("💀 轉弱" if rsi_val < 40 else "☁️ 盤整"),
+                "atr": atr_effective,
+                "atr_state": atr_state,  # ⭐ 新增
                 "support": support,
                 "pressure": pressure,
-                "atr": final_atr,
+                "buy_point": buy_point,
+                "volume_ratio": round(df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean(), 2),
+                "chips": "🔥 強勢" if rsi_val > 60 else ("💀 轉弱" if rsi_val < 40 else "☁️ 盤整"),
                 "turnover_zone": round(price * 0.99, 2),
-                "buy_point": buy_point
             }
-            print(f"✅ {name} (Price: {price}, ATR: {final_atr})")
+            
+            print(f"✅ {name} | ATR: {atr_effective} ({atr_state})")
             
         except Exception as e:
             print(f"❌ {sym} 錯誤: {str(e)}")
