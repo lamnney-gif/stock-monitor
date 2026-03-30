@@ -4,7 +4,7 @@ import os
 import time
 from string import Template
 
-st.set_page_config(page_title="半導體大戶戰情室", layout="wide")
+st.set_page_config(page_title="測試戰情室", layout="wide")
 
 # --- 1. 數據載入 ---
 def load_data():
