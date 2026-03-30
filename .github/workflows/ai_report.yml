@@ -27,6 +27,8 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
+          # 關鍵：先拉回行情數據，再推 AI 報告
+          git pull --rebase origin main
           git add analysis_results.json
           git commit -m "🧠 AI 戰略報告更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
           git push
