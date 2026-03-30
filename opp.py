@@ -87,7 +87,7 @@ for ticker, name in tickers.items():
         PRICE=str(d.get('price', d.get('Close', '---'))),
         PE=str(round(float(d.get('pe', 0)), 2)) if d.get('pe') not in ['---', None] else '---',
         GROWTH=str(d.get('growth', '---')),
-        RSI=str(d.get('rsi', d.get('RSI', '---'))), # 如果沒有就預設---
+        RSI=str(d.get('rsi', d.get('RSI', '00'))), # 如果沒有就預設00
         CHIPS=str(d.get('chips', d.get('institutional_ownership', '---'))),
         VOL_RATIO=str(d.get('volume_ratio', d.get('vol_ratio', '---'))),
         BUY_POINT=str(d.get('buy_point', '---')),
