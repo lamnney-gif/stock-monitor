@@ -16,37 +16,45 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列 (確保 60 秒倒數與行情更新並存) ---
-col_left, col_right = st.columns([1, 1])
+# --- 3. 頂部狀態列 (倒數計時) ---
+col_refresh, col_ai, col_market = st.columns([1, 1, 1])
 
-with col_left:
-    # 💡 這裡定義名稱為 refresh_timer，這就是你的 60 秒
+with col_refresh:
+    # 💡 60 秒刷新計時器
     refresh_timer = st.empty()
-    # 先給一個初始值，避免它消失
-    refresh_timer.metric("🔄 網頁刷新倒數", "60 秒")
+    refresh_timer.metric("🔄 網頁刷新", "60 秒")
 
-with col_right:
+with col_ai:
+    # 🤖 AI 倒數邏輯 (4小時 = 240分鐘)
+    ai_time_str = ai_db.get("last_update", "---").strip()
+    if ai_time_str != "---":
+        try:
+            ai_dt = datetime.strptime(ai_time_str, "%Y-%m-%d %H:%M:%S")
+            ai_diff = (datetime.now() - ai_dt).total_seconds() / 60
+            if ai_diff > 400: ai_diff -= 480 # 修正 UTC 時差
+            ai_rem = int((240 - ai_diff) * 60)
+            if ai_rem > 0:
+                st.info(f"🤖 AI 下次改版：{ai_rem // 3600}時 {(ai_rem % 3600) // 60}分後")
+            else:
+                st.warning("⏳ AI 正在同步...")
+        except:
+            st.write("🤖 AI 更新檢查中...")
+
+with col_market:
+    # 📈 行情倒數邏輯 (15分鐘)
     raw_time_str = raw_db.get("last_update", "---").strip()
     if raw_time_str != "---":
         try:
-            # 1. 解析檔案時間 (03:06:58)
-            last_dt = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
-            # 2. 計算目前時間與它的分鐘差 (台北 vs UTC)
-            diff_mins = (datetime.now() - last_dt).total_seconds() / 60
-            
-            # 3. 💡 暴力對齊時差：如果你差了 8 小時 (480分)，我們把它扣掉
-            if diff_mins > 400:
-                diff_mins -= 480
-            
-            # 4. 算出 15 分鐘還剩多少
-            rem_sec = int((15 - diff_mins) * 60)
-            
-            if rem_sec > 0:
-                st.success(f"📈 行情更新：{rem_sec // 60} 分 {rem_sec % 60} 秒後")
+            raw_dt = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
+            raw_diff = (datetime.now() - raw_dt).total_seconds() / 60
+            if raw_diff > 400: raw_diff -= 480 # 修正 UTC 時差
+            raw_rem = int((15 - raw_diff) * 60)
+            if raw_rem > 0:
+                st.success(f"📈 行情更新：{raw_rem // 60} 分 {raw_rem % 60} 秒後")
             else:
-                st.warning("⏳ 行情同步中...")
+                st.warning("⏳ 行情刷新中...")
         except:
-            st.write("🕒 行情時間計算中...")
+            st.write("🕒 行情更新檢查中...")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
