@@ -16,45 +16,44 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 3. 頂部狀態列 (倒數計時) ---
-col_refresh, col_ai, col_market = st.columns([1, 1, 1])
+# --- 3. 頂部狀態列：最強力取餘數邏輯 ---
+col_refresh, col_ai, col_market = st.columns(3)
 
 with col_refresh:
-    # 💡 60 秒刷新計時器
+    # 60秒網頁刷新
     refresh_timer = st.empty()
     refresh_timer.metric("🔄 網頁刷新", "60 秒")
 
+def get_countdown(time_str, limit_mins):
+    if time_str == "---" or not time_str: return None
+    try:
+        target_dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+        # 💡 不管時差幾小時，算絕對秒數差
+        diff_total_sec = abs(int((datetime.now() - target_dt).total_seconds()))
+        
+        # 💡 核心：取餘數。例如差 469 分鐘，469 % 15 = 4 分鐘（已過去），15 - 4 = 11 分鐘（剩餘）
+        limit_sec = limit_mins * 60
+        passed_sec = diff_total_sec % limit_sec
+        return limit_sec - passed_sec
+    except:
+        return None
+
 with col_ai:
-    # 🤖 AI 倒數邏輯 (4小時 = 240分鐘)
-    ai_time_str = ai_db.get("last_update", "---").strip()
-    if ai_time_str != "---":
-        try:
-            ai_dt = datetime.strptime(ai_time_str, "%Y-%m-%d %H:%M:%S")
-            ai_diff = (datetime.now() - ai_dt).total_seconds() / 60
-            if ai_diff > 400: ai_diff -= 480 # 修正 UTC 時差
-            ai_rem = int((240 - ai_diff) * 60)
-            if ai_rem > 0:
-                st.info(f"🤖 AI 下次改版：{ai_rem // 3600}時 {(ai_rem % 3600) // 60}分後")
-            else:
-                st.warning("⏳ AI 正在同步...")
-        except:
-            st.write("🤖 AI 更新檢查中...")
+    # AI 4小時倒數
+    ai_rem = get_countdown(ai_db.get("last_update", ""), 240)
+    if ai_rem:
+        st.info(f"🤖 AI 下次改版：{ai_rem // 3600}時 {(ai_rem % 3600) // 60}分後")
+    else:
+        st.info("🤖 AI 診斷同步中")
 
 with col_market:
-    # 📈 行情倒數邏輯 (15分鐘)
-    raw_time_str = raw_db.get("last_update", "---").strip()
-    if raw_time_str != "---":
-        try:
-            raw_dt = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
-            raw_diff = (datetime.now() - raw_dt).total_seconds() / 60
-            if raw_diff > 400: raw_diff -= 480 # 修正 UTC 時差
-            raw_rem = int((15 - raw_diff) * 60)
-            if raw_rem > 0:
-                st.success(f"📈 行情更新：{raw_rem // 60} 分 {raw_rem % 60} 秒後")
-            else:
-                st.warning("⏳ 行情刷新中...")
-        except:
-            st.write("🕒 行情更新檢查中...")
+    # 行情 15分鐘倒數
+    raw_rem = get_countdown(raw_db.get("last_update", ""), 15)
+    if raw_rem:
+        # 這裡現在絕對會顯示在 0 ~ 15 分鐘之間，絕對不會有 400 多分
+        st.success(f"📈 行情更新：{raw_rem // 60} 分 {raw_rem % 60} 秒後")
+    else:
+        st.success("📈 行情更新中")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
