@@ -1,4 +1,3 @@
-# fetcher.py
 import yfinance as yf
 import json
 import pandas as pd
@@ -34,9 +33,13 @@ def run_market():
             price = round(df['Close'].iloc[-1], 2)
             rsi_val = calculate_rsi(df['Close'], 14)
 
-            # 🔹 舊版 ATR 地板算法（你想要的）
-            atr_floor = (df['High'] - df['Low']).rolling(14).mean().iloc[-1]  # 不用 EMA
-            dynamic_stop = round(price - 2.5 * atr_floor, 2)  # 地板位置
+            # 🔹 ATR 地板（純數學止損地板）
+            atr_floor = (df['High'] - df['Low']).rolling(14).mean().iloc[-1]
+            dynamic_stop = round(price - 2.5 * atr_floor, 2)  # ATR地板
+
+            # 🔹 防守觀察點（高點回檔停利）
+            recent_high = df['Close'].rolling(5).max().iloc[-1]  # 最近5日高點
+            stop_profit_line = round(recent_high * 0.97, 2)      # 高點回檔3%
 
             # 標準差用於支撐壓力
             std20 = df['Close'].rolling(20).std().iloc[-1]
@@ -66,16 +69,18 @@ def run_market():
                 "chips": chip_flow,
                 "support": support,
                 "pressure": pressure,
-                "atr": round(atr_floor, 2),        # 就是舊版 ATR
+                "atr": round(atr_floor, 2),           # ATR地板
                 "turnover_zone": round(price * 0.99, 2),
                 "buy_point": buy_point,
-                "dynamic_stop": dynamic_stop       # 你的地板位置
+                "dynamic_stop": dynamic_stop,         # ATR底線（極端止損）
+                "stop_profit_line": stop_profit_line  # 防守觀察點（高點回檔停利）
             }
-            print(f"✅ {name} 數據完成: 價格={price}, ATR地板={round(atr_floor,2)}, 地板={dynamic_stop}")
+            print(f"✅ {name} 數據完成: 價格={price}, ATR地板={round(atr_floor,2)}, 防守觀察點={stop_profit_line}")
 
         except Exception as e:
             print(f"❌ {sym} 錯誤: {e}")
 
+    # 輸出 JSON
     with open("data_raw.json", "w", encoding="utf-8") as f:
         json.dump(raw_results, f, ensure_ascii=False, indent=4)
 
