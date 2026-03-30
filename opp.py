@@ -25,19 +25,15 @@ def init_ai_engines():
 
 ai_engines = init_ai_engines()
 
-# 2. 修改後的私密存取驗證
+# 2. 修改後的私密存取驗證 (加入防呆)
 def check_password():
     if st.session_state.get("password_correct", False):
         return True
     st.markdown("### 🖥️ 內部開發監測系統 V6.8")
     pwd = st.text_input("請輸入存取密碼：", type="password", key="password_input")
-    if pwd:
-        if pwd == "8888":
-            st.session_state["password_correct"] = True
-            st.rerun()
-        else:
-            st.error("😕 驗證失敗")
-            return False
+    if pwd == "8888":
+        st.session_state["password_correct"] = True
+        st.rerun()
     return False
 
 if not check_password():
@@ -65,20 +61,22 @@ st.sidebar.markdown("""
     <p style="font-size: 0.85em; color: #333; line-height: 1.6;">
     <b>【免責聲明】</b><br>
     1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>。<br><br>
-    2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-    3. 投資有風險，<b>盈虧請自負</b>，本站開發者不承擔任何法律責任。
+    2. 內文所載之所有價格皆為<b>程式演算法之實驗產出</b>，非屬投資建議。<br><br>
+    3. 投資有風險，<b>盈虧請自負</b>。
     </p>
 </div>
 """, unsafe_allow_html=True)
 
 # 4. 核心演算函數
 def get_institutional_flow(df):
-    recent = df.tail(5)
-    flow_score = 0
-    for i in range(1, len(recent)):
-        if recent['Close'].iloc[i] > recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score += 1
-        if recent['Close'].iloc[i] < recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score -= 1
-    return "🔥 強勢買入" if flow_score >= 2 else "💧 持續流出" if flow_score <= -2 else "☁️ 盤整觀望"
+    try:
+        recent = df.tail(5)
+        flow_score = 0
+        for i in range(1, len(recent)):
+            if recent['Close'].iloc[i] > recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score += 1
+            if recent['Close'].iloc[i] < recent['Close'].iloc[i-1] and recent['Volume'].iloc[i] > recent['Volume'].iloc[i-1]: flow_score -= 1
+        return "🔥 強勢買入" if flow_score >= 2 else "💧 持續流出" if flow_score <= -2 else "☁️ 盤整觀望"
+    except: return "☁️ 數據缺失"
 
 def get_volume_support(df):
     try:
@@ -95,51 +93,39 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# --- 5. Groq 數據純化診斷腦 (不含新聞分析) ---
+# --- 5. Groq 數據純化診斷腦 ---
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
     prompt = f"""
-    你現在是(Goldman Sachs)量化策略首席。請針對 {name} 進行『純數據量化診斷』。
-    
-    【核心數據】
-    現價:{price} | PE:{pe} | 營收成長:{rev} | RSI:{rsi:.1f} | 籌碼流向:{chip_flow} | 趨勢形態:{trend}
-    
-    請基於以上量化指標分析：
-    1. 籌碼與趨勢的背離或共振狀態。
-    2. 基於 PE 與成長率判斷目前的估值空間。
-    3. 給出具體的實戰部署（如：回測加碼、高檔利了結、觀望）。
-    
-    語氣專業冷靜，限制在 120 字內。不要提及新聞內容。
+    你是高盛首席策略師。針對 {name} 進行『純數據量化診斷』。
+    數據：現價:{price} | PE:{pe} | 營收成長:{rev} | RSI:{rsi:.1f} | 籌碼流向:{chip_flow} | 趨勢形態:{trend}
+    分析：1.背離或共振狀態 2.估值空間判斷 3.實戰部署（加碼、了結、觀望）。限制 120 字內，不要提到新聞。
     """
-    
     if ai_engines["groq"]:
         try:
-            completion = ai_engines["groq"].chat.completions.create(
+            res = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位專精於量化數據與資本市場架構的資深策略家。"},
-                          {"role": "user", "content": prompt}]
+                messages=[{"role": "system", "content": "你是一位量化數據家。"}, {"role": "user", "content": prompt}]
             )
-            return "🔥 策略室(Groq)： " + completion.choices[0].message.content
-        except: return "⚠️ 分析師會議中 (Groq API 忙碌)"
-    return "❌ Groq 未啟動"
+            return "🔥 策略室(Groq)： " + res.choices[0].message.content
+        except: return "⚠️ 分析暫停 (Groq 繁忙)"
+    return "❌ 未啟動"
 
-def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
+def calculate_ai_confidence(d, vix, sox_status, name):
     score = 0
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
     elif vix > 28: score -= 30
     else: score += 10
     if d['trend'] == "🌟 多頭排列": score += 15
-    if week_trend == "UP": score += 15
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    # 僅傳入數據，不傳入新聞
     ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'])
     
-    if score >= 85: return f"✅ 【強力進攻】{ai_report}", "✅"
-    elif score >= 65: return f"🔎 【分批佈局】{ai_report}", "✅"
-    elif score >= 45: return f"⚠️ 【觀望等待】{ai_report}", "⚠️"
+    if score >= 80: return f"✅ 【強力進攻】{ai_report}", "✅"
+    elif score >= 60: return f"🔎 【分批佈局】{ai_report}", "✅"
+    elif score >= 40: return f"⚠️ 【觀望等待】{ai_report}", "⚠️"
     else: return f"☢️ 【全面避險】{ai_report}", "☢️"
 
 # 6. 主頁面
@@ -155,44 +141,48 @@ tickers = {
 
 data_list, news_dict = [], {}
 
-with st.spinner('同步數據與 Groq 運算中...'):
-    vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
-    sox = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
-    us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
+with st.spinner('同步數據運算中...'):
+    try:
+        vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
+        sox = yf.Ticker("^SOX").history(period="1mo")
+        sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
+        us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
+    except:
+        vix, sox_status, us10y = 20, "☁️ UNKNOWN", 4.0
 
     for ticker, info in tickers.items():
         try:
-            # 側邊欄新聞照抓照放，但不餵給 AI
             news_dict[info['name']] = get_google_news(info['name'])
-
             stock = yf.Ticker(ticker)
-            s_info = stock.info
             df = stock.history(period="1y")
             if df.empty: continue
             
+            s_info = stock.info
             close_val = df['Close'].iloc[-1]
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
-            pe_val = s_info.get('trailingPE', 0)
-            rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
+            pe_str = f"{s_info.get('trailingPE', 0):.1f}" if s_info.get('trailingPE') else "N/A"
+            rev_str = f"{(s_info.get('revenueGrowth', 0) or 0)*100:.1f}%"
             
-            # 指標計算
+            # RSI
             delta = df['Close'].diff()
-            rsi_val = (100 - (100 / (1 + (delta.where(delta > 0, 0)).rolling(14).mean() / (-delta.where(delta < 0, 0)).rolling(14).mean()))).iloc[-1]
-            chip_flow = get_institutional_flow(df)
-            trend_label = "🌟 多頭排列" if df['Close'].rolling(5).mean().iloc[-1] > df['Close'].rolling(20).mean().iloc[-1] else "🌀 趨勢不明"
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
+            
+            flow = get_institutional_flow(df)
+            trend = "🌟 多頭排列" if df['Close'].rolling(5).mean().iloc[-1] > df['Close'].rolling(20).mean().iloc[-1] else "🌀 趨勢不明"
             
             ai_diag, ai_style = calculate_ai_confidence(
-                {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': f"{pe_val:.1f}", 'rev': f"{rev_growth:.1f}%"},
-                vix, sox_status, "UP" if close_val > df.rolling(50).mean().iloc[-1] else "DOWN", info['name']
+                {'trend': trend, 'chip_flow': flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
+                vix, sox_status, info['name']
             )
 
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
-                "ai_diag": ai_diag, "pe": f"{pe_val:.1f}", "rev": f"{rev_growth:.1f}%", "rsi": round(rsi_val, 1),
+                "ai_diag": ai_diag, "pe": pe_str, "rev": rev_str, "rsi": round(rsi_val, 1),
                 "stop": round(close_val - (2.5 * (df['High']-df['Low']).rolling(14).mean().iloc[-1]), 2),
                 "stop_line": round(df['High'].tail(5).max() * 0.97, 2), "chip_floor": round(get_volume_support(df), 2),
-                "buy": round(ma20 - 1.2 * std20, 2), "sell": round(ma20 + 2 * std20, 2), "chip_flow": chip_flow, "trend": trend_label
+                "buy": round(ma20 - 1.2 * std20, 2), "sell": round(ma20 + 2 * std20, 2), "flow": flow, "trend": trend
             })
         except: continue
 
@@ -208,7 +198,7 @@ for d in data_list:
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div><span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
             <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span></div>
-            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']}</span>
+            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['flow']}</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
             趨勢: {d['trend']} | <b>本益比: {d['pe']}</b> | <b>營收成長: {d['rev']}</b>
@@ -235,5 +225,7 @@ for d in data_list:
     </div>
     """, unsafe_allow_html=True)
 
-time.sleep(60)
+for i in range(60, 0, -1):
+    timer_placeholder.markdown(f"🔄 {i}s 後自動刷新")
+    time.sleep(1)
 st.rerun()
