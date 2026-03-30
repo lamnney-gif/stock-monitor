@@ -19,7 +19,7 @@ def load_data():
 # --- 2. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:25px;">
-    <h3 style="color:#ef6c00; margin:0;">⚠️ 系統使用免責聲明</h3>
+    <h3 style="color:#ef6c00; margin:0;">⚠️ 讀前必視：系統使用免責聲明</h3>
     <p style="color:#5d4037; font-size:0.9em; margin-top:5px;">
         1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
     2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
