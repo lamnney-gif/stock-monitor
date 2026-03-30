@@ -132,7 +132,7 @@ def get_google_news(keyword):
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
-@st.cache_data(ttl=14400, show_spinner=False)
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     prompt = f"""
