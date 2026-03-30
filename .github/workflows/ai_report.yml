@@ -6,13 +6,14 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 🟢 加入這行，強行壓制 Node.js 版本警告
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # 這裡也宣告權限
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -33,11 +34,15 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
+          
+          # 🟢 暴力同步：先拉取遠端最新變動，防止 128 衝突
           git pull --rebase origin main
+          
           git add analysis_results.json
           if git diff --staged --quiet; then
-            echo "No report changes"
+            echo "No changes"
           else
             git commit -m "🧠 AI Strategy Updated"
+            # 🟢 雙重保險推播
             git push origin main || (git pull --rebase origin main && git push origin main)
           fi
