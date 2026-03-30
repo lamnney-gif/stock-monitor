@@ -212,10 +212,6 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
-            # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
-            current_news = get_google_news(info['name'])
-            news_dict[info['name']] = current_news
-
             # B. 抓取行情數據
             stock = yf.Ticker(ticker)
             s_info = stock.info
