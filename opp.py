@@ -123,14 +123,6 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-def get_google_news(keyword):
-    news = []
-    try:
-        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
-        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
-    except: pass
-    return news
-
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
 @st.cache_data(ttl=14400)
