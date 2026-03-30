@@ -1,4 +1,85 @@
 {
-    "update_time": "2026-03-30 10:38:39",
-    "stocks": {}
+    "stocks": {
+        "2330.TW": {
+            "name": "台積電",
+            "price": 1780.0,
+            "pe": 26.867924,
+            "growth": "20.5%",
+            "rsi": 50,
+            "support": 1793.4,
+            "pressure": 1936.43
+        },
+        "NVDA": {
+            "name": "輝達",
+            "price": 167.52,
+            "pe": 34.11813,
+            "growth": "73.2%",
+            "rsi": 50,
+            "support": 172.16,
+            "pressure": 189.12
+        },
+        "MU": {
+            "name": "美光",
+            "price": 357.22,
+            "pe": 16.865911,
+            "growth": "196.3%",
+            "rsi": 50,
+            "support": 360.56,
+            "pressure": 467.76
+        },
+        "000660.KS": {
+            "name": "海力士",
+            "price": 873000.0,
+            "pe": "---",
+            "growth": "66.1%",
+            "rsi": 50,
+            "support": 863870.15,
+            "pressure": 1052589.79
+        },
+        "2303.TW": {
+            "name": "聯電",
+            "price": 57.0,
+            "pe": 17.220545,
+            "growth": "2.4%",
+            "rsi": 50,
+            "support": 56.82,
+            "pressure": 63.45
+        },
+        "6770.TW": {
+            "name": "力積電",
+            "price": 58.1,
+            "pe": "---",
+            "growth": "12.3%",
+            "rsi": 50,
+            "support": 57.99,
+            "pressure": 75.49
+        },
+        "2344.TW": {
+            "name": "華邦電",
+            "price": 93.0,
+            "pe": 105.681816,
+            "growth": "42.4%",
+            "rsi": 50,
+            "support": 92.91,
+            "pressure": 126.99
+        },
+        "3481.TW": {
+            "name": "群創",
+            "price": 24.6,
+            "pe": 820.00006,
+            "growth": "5.7%",
+            "rsi": 50,
+            "support": 23.65,
+            "pressure": 31.3
+        },
+        "1303.TW": {
+            "name": "南亞",
+            "price": 81.4,
+            "pe": 142.80702,
+            "growth": "-5.4%",
+            "rsi": 50,
+            "support": 72.7,
+            "pressure": 89.75
+        }
+    }
 }
