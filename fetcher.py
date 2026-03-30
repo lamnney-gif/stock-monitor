@@ -3,6 +3,10 @@ import pandas as pd
 import json
 import os
 
+# 強制使用台灣時間 (UTC+8)
+def get_tw_time():
+    return datetime.utcnow() + timedelta(hours=8)
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
