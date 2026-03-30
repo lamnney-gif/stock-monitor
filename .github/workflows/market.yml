@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 消除 Node.js 警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   update:
@@ -27,20 +27,14 @@ jobs:
         run: python fetcher.py
 
       - name: Push Data
-        env:
-          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "MarketBot"
-          
-          # 先拉取遠端最新變動，防止衝突
           git pull --rebase origin main
-          
           git add data_raw.json
-          # 檢查是否有變動，避免空的 commit 報錯
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes"
           else
-            git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "📈 Market Data Updated"
             git push origin main || (git pull --rebase origin main && git push origin main)
           fi
