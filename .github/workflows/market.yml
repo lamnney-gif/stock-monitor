@@ -1,1 +1,19 @@
-
+name: Market Data Every Minute
+on:
+  schedule:
+    - cron: '*/1 * * * *' # 每分鐘執行一次
+  workflow_dispatch:
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Fetcher
+        run: python fetcher.py
+      - name: Commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data_raw.json
+          git commit -m "Update Market Data" || exit 0
+          git push
