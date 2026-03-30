@@ -21,6 +21,10 @@ from datetime import datetime, timezone
 
 # --- 2. 狀態列：精準倒數邏輯 ---
 col_status1, col_status2 = st.columns(2)
+
+with col_refresh:
+    # 這裡用來放「60秒網頁強制刷新」的數字
+    refresh_holder = st.empty()
    
 with col_status2:
     ai_time_str = ai_db.get("last_update", "---").strip()
