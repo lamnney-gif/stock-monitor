@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-03-31 04:14:27",
+    "last_update": "2026-03-31 04:54:44",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -14,7 +14,8 @@
             "atr": 33.17,
             "turnover_zone": 1762.2,
             "buy_point": 1730.96,
-            "dynamic_stop": 1697.07
+            "dynamic_stop": 1697.07,
+            "stop_profit_line": 1789.65
         },
         "NVDA": {
             "name": "輝達",
@@ -22,14 +23,15 @@
             "pe": 33.64,
             "growth": "73.2%",
             "rsi": 26.06,
-            "volume_ratio": 1.0,
+            "volume_ratio": 1.05,
             "chips": "💀 轉弱",
             "support": 156.56,
             "pressure": 173.78,
             "atr": 4.44,
             "turnover_zone": 163.52,
             "buy_point": 158.28,
-            "dynamic_stop": 154.06
+            "dynamic_stop": 154.06,
+            "stop_profit_line": 173.32
         },
         "MU": {
             "name": "美光",
@@ -37,14 +39,15 @@
             "pe": 15.19,
             "growth": "196.3%",
             "rsi": 32.23,
-            "volume_ratio": 1.41,
+            "volume_ratio": 1.42,
             "chips": "💀 轉弱",
             "support": 267.88,
             "pressure": 375.72,
             "atr": 23.4,
             "turnover_zone": 318.58,
             "buy_point": 278.67,
-            "dynamic_stop": 263.3
+            "dynamic_stop": 263.3,
+            "stop_profit_line": 383.66
         },
         "000660.KS": {
             "name": "海力士",
@@ -59,7 +62,8 @@
             "atr": 43214.29,
             "turnover_zone": 864270.0,
             "buy_point": 808296.12,
-            "dynamic_stop": 764964.29
+            "dynamic_stop": 764964.29,
+            "stop_profit_line": 965150.0
         },
         "2303.TW": {
             "name": "聯電",
@@ -74,7 +78,8 @@
             "atr": 1.46,
             "turnover_zone": 56.43,
             "buy_point": 54.73,
-            "dynamic_stop": 53.34
+            "dynamic_stop": 53.34,
+            "stop_profit_line": 57.33
         },
         "6770.TW": {
             "name": "力積電",
@@ -89,7 +94,8 @@
             "atr": 4.81,
             "turnover_zone": 57.52,
             "buy_point": 52.1,
-            "dynamic_stop": 46.06
+            "dynamic_stop": 46.06,
+            "stop_profit_line": 63.05
         },
         "2344.TW": {
             "name": "華邦電",
@@ -104,7 +110,8 @@
             "atr": 7.56,
             "turnover_zone": 92.07,
             "buy_point": 81.31,
-            "dynamic_stop": 74.11
+            "dynamic_stop": 74.11,
+            "stop_profit_line": 96.01
         },
         "3481.TW": {
             "name": "群創",
@@ -119,7 +126,8 @@
             "atr": 1.69,
             "turnover_zone": 24.35,
             "buy_point": 21.98,
-            "dynamic_stop": 20.38
+            "dynamic_stop": 20.38,
+            "stop_profit_line": 24.88
         },
         "1303.TW": {
             "name": "南亞",
@@ -134,7 +142,8 @@
             "atr": 5.16,
             "turnover_zone": 80.59,
             "buy_point": 75.55,
-            "dynamic_stop": 68.51
+            "dynamic_stop": 68.51,
+            "stop_profit_line": 78.96
         }
     }
 }
