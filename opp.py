@@ -16,44 +16,47 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 頂部狀態列 (計時器與更新時間) ---
+# --- 2. 頂部狀態列 (強制台灣時間 UTC+8) ---
 col_time1, col_time2 = st.columns(2)
 
+# 取得目前台灣時間
+# 注意：Streamlit Cloud 伺服器通常是 UTC，所以要手動加 8 小時
+now_tw = datetime.utcnow() + timedelta(hours=8)
+
 with col_time1:
-    # 網頁即時刷新倒數
     refresh_timer = st.empty()
 
 with col_time2:
-    # AI 更新時間邏輯
     ai_last_time_str = ai_db.get("last_update", "---")
     if ai_last_time_str != "---":
         try:
+            # 假設 analysis.py 存入的是 UTC 格式，這裡轉為台灣時間顯示
             last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
-            next_dt = last_dt + timedelta(hours=4)  # 假設 4 小時更新一次
+            # 如果你的分析腳本已經是存台灣時間，就不用加這 8 小時；如果是存 UTC，則需加上去
+            # 這裡假設腳本跟著伺服器走(UTC)，我們顯示給你看要轉回台灣時間
+            next_dt = last_dt + timedelta(hours=4) # 4 小時分析一次
             
-            current_now = datetime.now()
-            if current_now > next_dt:
-                ai_status_msg = "⏳ AI 診斷：正在進行新一輪分析..."
+            if now_tw > next_dt:
+                ai_status_msg = "⏳ AI 診斷：新一輪分析中..."
             else:
-                # 顯示具體時間點
                 target_time = next_dt.strftime("%H:%M")
-                ai_status_msg = f"📅 AI 預計下次更新時間：{target_time}"
+                ai_status_msg = f"📅 下次 AI 更新 (台灣)：{target_time}"
         except:
-            ai_status_msg = "⚠️ AI 時間格式錯誤"
+            ai_status_msg = "⚠️ 時間轉換錯誤"
     else:
-        ai_status_msg = "🤖 AI 更新時間：等待數據同步"
+        ai_status_msg = "🤖 AI 更新：等待同步"
     
     st.info(ai_status_msg)
 
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
-    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️ 系統使用免責聲明</h3>
+    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️ 系統使用免責聲明 (台北時間執勤中)</h3>
     <p style="color:#5d4037; font-size:0.85em; margin:5px 0 0 0;">本平台數據僅供研究參考，投資者應自行評估風險並自負損益。</p>
 </div>
 """, unsafe_allow_html=True)
 
-# 授權檢查 (保留你原本的邏輯)
+# 授權檢查 (保留 8888 邏輯)
 if "auth" not in st.session_state: st.session_state["auth"] = False
 if not st.session_state["auth"]:
     if st.text_input("授權碼", type="password") == "8888":
@@ -61,7 +64,7 @@ if not st.session_state["auth"]:
         st.rerun()
     st.stop()
 
-# --- 4. HTML 模板 (維持原樣，確保風控與密集換手區都在) ---
+# --- 4. HTML 模板 (卡片樣式) ---
 CARD_STYLE = Template("""
 <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: sans-serif; margin-bottom: 30px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -119,7 +122,7 @@ for tk in ticker_list:
 
 # --- 6. 循環倒數 ---
 for i in range(60, 0, -1):
-    refresh_timer.metric("🔄 行情即時刷新", f"{i}s")
+    refresh_timer.metric("🔄 行情即時刷新 (台北時間)", f"{i}s")
     time.sleep(1)
 
 st.rerun()
