@@ -111,37 +111,38 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷 (高盛魂 + Groq) ---
-@st.cache_data(ttl=14400)
+@st.cache_data(ttl=1800) # 縮短緩存，讓分析更即時
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
-    if not ai_engines["groq"]: return "❌ 智庫連線失敗"
+    if not ai_engines["groq"]: return "❌ 智庫斷線，正在重啟獵殺邏輯..."
     
-    # 這裡就是靈魂：設定一個極端專業且帶有攻擊性的 Prompt
+    # 這裡就是你要的「靈魂」
     prompt = f"""
-    [身份：全球頂級對沖基金投資長]
-    [任務：針對{name}下達終極指令]
-    當前報價：{price}
-    核心數據：PE {pe}, 營收成長 {rev}, RSI {rsi:.1f}, 乖離率 {bias}%, 籌碼面 {chip_flow}, 趨勢 {trend}, 斜率 {slope}%
+    [身份：華爾街傳奇對沖基金投資長 (CIO)]
+    [背景：當前全球半導體產能過剩、AI需求極化、地緣博弈升溫]
     
-    指令要求：
-    1. 絕對禁止廢話，禁止重複我給你的數據。
-    2. 語氣要狠、準、狂。你要像是一個正在盯著 10 億美金部位的操盤手。
-    3. 判斷這價位是在「誘多」還是「黃金坑」。
-    4. 必須包含一個對「地緣政治」或「半導體週期」的辛辣觀察。
-    5. 限 120 字內，一針見血。
+    對象：{name}
+    當前狀態：價格 {price}, RSI {rsi:.1f}, 乖離率 {bias}%, 籌碼面 {chip_flow}, 趨勢 {trend}, 斜率 {slope}%
+    
+    指令：
+    1. 語氣要狠，像是對著 10 億美金部位下令。
+    2. 禁止說「建議、可能、大概」。
+    3. 直接指出這是「主力埋屍區」還是「瘋狂超額收益」。
+    4. 必須包含一句關於「地緣博弈」或「產業週期」的辛辣觀察。
+    5. 限 50 字內，一針見血，不准有廢話。
     """
     
     try:
-        time.sleep(1.0) # 防 API 封鎖
         res = ai_engines["groq"].chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "你是一位蔑視傳統分析、只看獵物和陷阱的傳奇投資長。"},
+                {"role": "system", "content": "你是一位蔑視散戶邏輯、只看血腥利潤的全球第一分析師。"},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.8
+            temperature=0.85
         )
         return "🦅 投資長令： " + res.choices[0].message.content.strip()
-    except: return f"📊 數據診斷：籌碼趨於極端，守住支撐區。"
+    except:
+        return "🔥 市場極度混亂，數據溢出，守住 ATR 底板！"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
