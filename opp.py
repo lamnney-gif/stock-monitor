@@ -20,35 +20,53 @@ import time
 from datetime import datetime, timezone
 
 # --- 2. 狀態列：精準倒數邏輯 ---
-col_status1, col_status2 = st.columns(2)
+# 修正：將變數名稱統一為 col_refresh 和 col_status2
+col_refresh, col_status2 = st.columns(2)
 
 with col_refresh:
     # 這裡用來放「60秒網頁強制刷新」的數字
     refresh_holder = st.empty()
    
 with col_status2:
+    # 確保你有從 datetime 匯入 timezone
+    from datetime import datetime, timezone
+    
     ai_time_str = ai_db.get("last_update", "---").strip()
     raw_time_str = raw_db.get("last_update", "---").strip()
 
     def get_remaining_seconds(time_str, limit_minutes):
-        if time_str == "---": return None
+        if time_str == "---" or not time_str: return None
         try:
             # 1. 將字串轉為 datetime 物件
             dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
             
-            # 2. 關鍵：強制指定這串時間是 UTC (因為 GitHub Actions 在 UTC 跑)
-            # 如果你的 analyzer.py 是在 GitHub 跑的，它存的就是 UTC
+            # 2. 強制指定這串時間是 UTC (因為 GitHub Actions 在 UTC 跑)
             dt_utc = dt.replace(tzinfo=timezone.utc)
             
-            # 3. 計算從存檔到「現在」經過了多少秒
-            # time.time() 永遠返回目前的 UTC Timestamp
+            # 3. 計算從存檔到「現在」經過了多少秒 (time.time() 是全球統一的)
             elapsed_seconds = int(time.time() - dt_utc.timestamp())
             
-            # 4. 剩餘秒數 = (限制分鐘 * 60) - 已經過的秒數
+            # 4. 剩餘秒數
             remaining = (limit_minutes * 60) - elapsed_seconds
             return remaining
         except:
             return None
+
+    # --- A. AI 診斷倒數 (4小時 = 240分鐘) ---
+    ai_rem = get_remaining_seconds(ai_time_str, 240)
+    if ai_rem is not None:
+        if ai_rem > 0:
+            st.info(f"🤖 AI 下次改版：{int(ai_rem//3600)}時 {int((ai_rem%3600)//60)}分後")
+        else:
+            st.warning(f"⏳ AI 同步中... (上次更新: {ai_time_str})")
+
+    # --- B. 行情數據倒數 (15分鐘) ---
+    raw_rem = get_remaining_seconds(raw_time_str, 15)
+    if raw_rem is not None:
+        if raw_rem > 0:
+            st.success(f"📈 行情下次更新：{int(raw_rem//60)} 分 {int(raw_rem%60)} 秒後")
+        else:
+            st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
 
     # --- A. AI 診斷倒數 (4小時 = 240分鐘) ---
     ai_rem = get_remaining_seconds(ai_time_str, 240)
