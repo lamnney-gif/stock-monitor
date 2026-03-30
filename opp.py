@@ -16,24 +16,34 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 倒數計時器區塊 ---
+# --- 2. 頂部狀態列 (計時器與更新時間) ---
 col_time1, col_time2 = st.columns(2)
 
-# 網頁刷新倒數 (60秒)
 with col_time1:
+    # 網頁即時刷新倒數
     refresh_timer = st.empty()
 
-# AI 分析倒數 (假設 4 小時更新一次)
 with col_time2:
+    # AI 更新時間邏輯
     ai_last_time_str = ai_db.get("last_update", "---")
     if ai_last_time_str != "---":
-        last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
-        next_dt = last_dt + timedelta(hours=4)
-        diff = next_dt - datetime.now()
-        ai_msg = f"🤖 AI 下次改版倒數: {max(0, diff.seconds // 3600)}時 {(diff.seconds // 60) % 60}分"
+        try:
+            last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
+            next_dt = last_dt + timedelta(hours=4)  # 假設 4 小時更新一次
+            
+            current_now = datetime.now()
+            if current_now > next_dt:
+                ai_status_msg = "⏳ AI 診斷：正在進行新一輪分析..."
+            else:
+                # 顯示具體時間點
+                target_time = next_dt.strftime("%H:%M")
+                ai_status_msg = f"📅 AI 預計下次更新時間：{target_time}"
+        except:
+            ai_status_msg = "⚠️ AI 時間格式錯誤"
     else:
-        ai_msg = "🤖 AI 更新時間：等待同步中"
-    st.info(ai_msg)
+        ai_status_msg = "🤖 AI 更新時間：等待數據同步"
+    
+    st.info(ai_status_msg)
 
 # --- 3. 免責聲明 ---
 st.markdown("""
@@ -43,7 +53,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 授權檢查
+# 授權檢查 (保留你原本的邏輯)
 if "auth" not in st.session_state: st.session_state["auth"] = False
 if not st.session_state["auth"]:
     if st.text_input("授權碼", type="password") == "8888":
@@ -51,7 +61,7 @@ if not st.session_state["auth"]:
         st.rerun()
     st.stop()
 
-# --- 4. HTML 模板 (含風控與密集換手區) ---
+# --- 4. HTML 模板 (維持原樣，確保風控與密集換手區都在) ---
 CARD_STYLE = Template("""
 <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: sans-serif; margin-bottom: 30px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -60,7 +70,7 @@ CARD_STYLE = Template("""
             <div style="font-size:3.5em; font-weight:900; color:#b71c1c; margin:5px 0;">$$$PRICE</div>
             <div style="font-size:0.9em; color:#555;">趨勢：💀 空頭排列 | <b>PE: $PE</b> | <b>成長: $GROWTH</b></div>
         </div>
-        <div style="background:#fbe9e7; padding:12px; border-radius:8px; width:160px; font-size:0.85em; color:#d32f2f; border:1px solid #ffccbc;">
+        <div style="background:#fbe9e7; padding:12px; border-radius:8px; width:170px; font-size:0.85em; color:#d32f2f; border:1px solid #ffccbc;">
             RSI: $RSI | 籌碼: $CHIPS | 量比: $VOL_RATIO
         </div>
     </div>
@@ -107,9 +117,9 @@ for tk in ticker_list:
     )
     st.markdown(html_output, unsafe_allow_html=True)
 
-# --- 6. 動態倒數計時邏輯 ---
+# --- 6. 循環倒數 ---
 for i in range(60, 0, -1):
-    refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{i} 秒")
+    refresh_timer.metric("🔄 行情即時刷新", f"{i}s")
     time.sleep(1)
 
 st.rerun()
