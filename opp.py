@@ -2,7 +2,9 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import feedparser
 from datetime import datetime
+from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
@@ -121,19 +123,33 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
+def get_google_news(keyword):
+    news = []
+    try:
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
+
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
 @st.cache_data(ttl=14400)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
+    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     
     prompt = f"""
     你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
     
+    【1. 即時政經與外部衝突】
+    市場現狀：{news_context}
+    請自行識別當前的核心驅動力(如地緣政治開戰、油價飆升、AI需求轉折)。
+    分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
+
     【2. 個股估值與技術面】
     現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
     
     【3. 操作核心建議】
-    判斷目前是「溢價合理」還是「黑天鵝預警」。
+    結合政經變數，判斷目前是「溢價合理」還是「黑天鵝預警」。
     給出具體的實戰部署（如：回測加碼、高檔利了結、現金為王）。
     語氣專業冷靜，限制在 130 字內。
     """
@@ -155,7 +171,7 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
         except: return "⚠️ 分析師會議中 (API 忙碌)"
     return "❌ 分析引擎未啟動"
 
-def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
+def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 0
     if sox_status == "📈 BULL": score += 20
     if vix < 20: score += 20
@@ -166,8 +182,8 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    # 執行 AI 深度分析
-    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'])
+    # 傳入新聞進行深度分析 (將價格取整數以優化快取命中率)
+    ai_report = get_ai_analysis(name, round(d['price'], 1), d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], tuple(news))
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
@@ -186,36 +202,49 @@ tickers = {
     "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}, "1303.TW": {"name": "南亞", "adr": None}
 }
 
-data_list = []
+data_list, news_dict = [], {}
 
 with st.spinner('同步數據與 AI 運算中...'):
+    # --- 優化：批量抓取所有數據 ---
+    ticker_list = list(tickers.keys())
+    all_data = yf.download(ticker_list, period="1y", group_by='ticker', progress=False)
+    all_weekly = yf.download(ticker_list, period="2y", interval="1wk", group_by='ticker', progress=False)
+    
     vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
-    sox = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
+    sox_df = yf.Ticker("^SOX").history(period="1mo")
+    sox_status = "📈 BULL" if sox_df['Close'].iloc[-1] > sox_df['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
 
     for ticker, info in tickers.items():
         try:
-            # A. 抓取行情數據
+            # A. 優先獲取即時新聞
+            current_news = get_google_news(info['name'])
+            news_dict[info['name']] = current_news
+
+            # B. 從批量數據中提取
+            df = all_data[ticker].dropna() if len(ticker_list) > 1 else all_data.dropna()
+            df_w = all_weekly[ticker].dropna() if len(ticker_list) > 1 else all_weekly.dropna()
+            
+            if df.empty: continue
+            
             stock = yf.Ticker(ticker)
             s_info = stock.info
-            df = stock.history(period="1y")
-            df_w = stock.history(period="2y", interval="1wk")
-            if df.empty: continue
             
             close_val = df['Close'].iloc[-1]
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # B. 基本面
+            # C. 基本面
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
             
-            # C. 技術指標
+            # D. 技術指標
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
+            # 修正：加入極小值防止除以零
+            rs = gain / (loss + 1e-9)
+            rsi_val = (100 - (100 / (1 + rs))).iloc[-1]
             atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
             
             chip_flow = get_institutional_flow(df)
@@ -224,19 +253,19 @@ with st.spinner('同步數據與 AI 運算中...'):
             bias = ((close_val - ma20) / ma20) * 100
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # D. 風控與支撐
+            # E. 風控與支撐
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
-            # E. AI 綜合診斷
+            # F. AI 綜合診斷
             pe_str = f"{pe_val:.1f}" if pe_val else "N/A"
             rev_str = f"{rev_growth:.1f}%"
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
                 {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
-                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
+                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name'], current_news
             )
 
             data_list.append({
@@ -253,7 +282,11 @@ with st.spinner('同步數據與 AI 運算中...'):
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
+for name, news in news_dict.items():
+    with st.sidebar.expander(f"📰 {name} 相關動態"):
+        for n in news: st.markdown(n)
 
+# 限制顯示上限：這份代碼目前會渲染清單中所有的卡片
 for d in data_list:
     st.markdown(f"""
     <div class="status-card {d['style']}">
@@ -292,6 +325,7 @@ for d in data_list:
     </div>
     """, unsafe_allow_html=True)
 
+# 倒數計時與重整
 for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
     time.sleep(1)
