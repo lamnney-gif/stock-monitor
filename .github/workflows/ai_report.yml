@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 消除 Node.js 警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   update:
@@ -30,19 +30,14 @@ jobs:
         run: python analyzer.py
 
       - name: Push AI Results
-        env:
-          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
-          
-          # 關鍵：防止撞到行情腳本
           git pull --rebase origin main
-          
           git add analysis_results.json
           if git diff --staged --quiet; then
             echo "No report changes"
           else
-            git commit -m "🧠 AI 戰術報告更新: $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "🧠 AI Strategy Updated"
             git push origin main || (git pull --rebase origin main && git push origin main)
           fi
