@@ -89,5 +89,5 @@ for ticker, name in tickers.items():
         </div>
         """, unsafe_allow_html=True)
 
-time.sleep(600)
+time.sleep(60)
 st.rerun()
