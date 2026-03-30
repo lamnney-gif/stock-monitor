@@ -5,6 +5,10 @@ on:
     - cron: '0 */4 * * *'
   workflow_dispatch:
 
+# 🟢 只設這一個，解決 Node.js 警告
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -14,8 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # 不要抓全部歷史，直接抓最新一份，減少 128 衝突
-          fetch-depth: 1 
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -24,6 +27,7 @@ jobs:
 
       - name: Run AI
         env:
+          # 🟢 傳入你的兩把鑰匙
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
           GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
         run: |
@@ -35,24 +39,18 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 解決 128 錯誤的最強手段：強制從遠端覆蓋
-          git fetch origin main
-          git checkout main analysis_results.json || echo "New file"
+          # 解決 128 錯誤與更新無效：強制拉取遠端最新檔案
+          git pull origin main --rebase
           
           git add analysis_results.json
           
-          # 檢查是否有變動
+          # 檢查是否有真正的差異
           if git diff --staged --quiet; then
-            echo "No changes"
+            echo "No changes detected, skipping push."
           else
-            git commit -m "🧠 AI Update $(date +'%Y-%m-%d %H:%M')"
-            # 暴力推播：失敗就 rebase 重試 3 次
-            n=0
-            until [ $n -ge 3 ]
-            do
-              git push origin main && break
-              n=$((n+1))
-              git pull --rebase origin main
-              sleep 5
+            git commit -m "🧠 AI Strategy Updated: $(date +'%Y-%m-%d %H:%M')"
+            # 暴力推播 5 次，直到成功
+            for i in {1..5}; do
+              git push origin main && exit 0 || (git pull --rebase origin main && sleep 5)
             done
           fi
