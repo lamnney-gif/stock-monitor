@@ -155,6 +155,7 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     """
     
     if ai_engines["groq"]:
+        time.sleep(5)
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
