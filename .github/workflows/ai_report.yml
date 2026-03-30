@@ -1,34 +1,48 @@
 name: 4h AI Strategist
+
 on:
   schedule:
     - cron: '0 */4 * * *'
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 消除 Node.js 警告
+
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+
       - name: Install deps
         run: pip install groq
-      - name: Run AI
+
+      - name: Run AI Analyzer
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
           GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
         run: python analyzer.py
-      - name: Push
+
+      - name: Push AI Results
         env:
           TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
-          # 關鍵：先拉回行情數據，再推 AI 報告
+          
+          # 關鍵：防止撞到行情腳本
           git pull --rebase origin main
+          
           git add analysis_results.json
-          git commit -m "🧠 AI 戰略報告更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
-          git push
+          if git diff --staged --quiet; then
+            echo "No report changes"
+          else
+            git commit -m "🧠 AI 戰術報告更新: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin main || (git pull --rebase origin main && git push origin main)
+          fi
