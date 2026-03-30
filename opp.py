@@ -114,7 +114,7 @@ def get_volume_support(df):
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
     if not ai_engines["groq"]: return "❌ Groq 引擎離線"
     fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。守住支撐位。"
-    prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 然後自行到網路找個股和相關產業新聞和消息,用120字以內分析總結給我。"
+    prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 一句話結論(50字內)。"
     try:
         time.sleep(1.8)
         res = ai_engines["groq"].chat.completions.create(
@@ -147,10 +147,21 @@ with col_t: st.title("🖥️ Beta Lab AI Ultimate - 數據全量對齊")
 with col_r: timer_placeholder = st.empty()
 
 with st.spinner('同步全球數據與 AI 模擬中...'):
-    vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
-    sox_df = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "📈 BULL" if sox_df['Close'].iloc[-1] > sox_df['Close'].mean() else "📉 BEAR"
-    us10y = yf.Ticker("^TNX").history(period="1d")['Close'].iloc[-1]
+    # --- VIX 抓取防崩潰修正 ---
+    try:
+        vix_df = yf.Ticker("^VIX").history(period="5d")
+        vix = round(vix_df['Close'].iloc[-1], 2) if not vix_df.empty else 20.0
+    except: vix = 20.0
+
+    try:
+        sox_df = yf.Ticker("^SOX").history(period="1mo")
+        sox_status = "📈 BULL" if (not sox_df.empty and sox_df['Close'].iloc[-1] > sox_df['Close'].mean()) else "📉 BEAR"
+    except: sox_status = "📉 BEAR"
+
+    try:
+        us10y_df = yf.Ticker("^TNX").history(period="1d")
+        us10y = us10y_df['Close'].iloc[-1] if not us10y_df.empty else 4.0
+    except: us10y = 4.0
 
     for ticker, name in tickers.items():
         try:
@@ -164,7 +175,7 @@ with st.spinner('同步全球數據與 AI 模擬中...'):
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / (df['Volume'].iloc[-6:-1].mean() + 1e-9)
             
-            # --- 數據變數 (物理還原，絕不漏掉) ---
+            # --- 數據變數 (物理還原) ---
             pe_val = f"{s_info.get('trailingPE', 0):.1f}"
             rev_growth = f"{(s_info.get('revenueGrowth', 0) or 0) * 100:.1f}%"
             inst_hold = f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%"
