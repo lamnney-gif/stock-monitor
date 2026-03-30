@@ -16,20 +16,22 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列 (純顯示，不計算時差) ---
+# --- 2. 狀態列 (純顯示存檔點，不進行時間運算) ---
 col_status1, col_status2 = st.columns(2)
 
 with col_status1:
-    refresh_timer = st.empty() # 60秒自動刷新
+    # 保持 60 秒網頁自動重新整理倒數
+    refresh_timer = st.empty() 
 
 with col_status2:
-    # 只要讀得到報告內容，就顯示綠色成功
-    if ai_db.get("reports") and len(ai_db["reports"]) > 0:
-        last_t = ai_db.get("last_update", "---")
-        st.success(f"✅ AI 診斷：已接入最新報告 (存檔點: {last_t})")
+    # 直接讀取 AI 報告中的存檔時間字串
+    ai_last_time = ai_db.get("last_update", "---")
+    
+    if ai_db.get("reports") and ai_last_time != "---":
+        # 只要有資料，就顯示綠色成功訊息，並直接印出存檔點
+        st.success(f"✅ AI 診斷：已接入最新報告 (雲端存檔點: {ai_last_time})")
     else:
-        # 如果檔案還沒推上來，顯示等待中
-        st.warning("⏳ AI 診斷：新一輪報告生成中 (GitHub 同步延遲)...")
+        st.warning("⏳ AI 診斷：等待雲端數據同步中 (GitHub Actions 載入中)...")
 
 # --- 3. 免責聲明 ---
 st.markdown("""
