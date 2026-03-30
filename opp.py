@@ -129,10 +129,6 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
     prompt = f"""
     你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
     
-    【1. 即時政經與外部衝突】
-    請根據目前的全球市場格局，自行識別該產業當前的核心驅動力(如地緣政治、AI需求轉折、利率政策)。
-    分析這些外部因素對該公司供應鏈與資金流向的具體損益路徑。
-
     【2. 個股估值與技術面】
     現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
     
