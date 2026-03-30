@@ -132,7 +132,7 @@ def calculate_ai_confidence(d, vix, sox_s, week_t, name):
     else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
 
 # 6. 主頁面與數據清單
-tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
+tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 data_list = []
 
 col_t, col_r = st.columns([3, 1])
