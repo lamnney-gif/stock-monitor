@@ -4,26 +4,19 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
-import google.generativeai as genai
 import time
 from groq import Groq
 
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# --- 2. AI 核心啟動 ---
+# --- 2. AI 核心啟動 (移除 Gemini，專攻 Groq) ---
 @st.cache_resource
 def init_ai_engines():
-    engines = {"gemini": None, "groq": None}
+    engines = {"groq": None}
     try:
         if "GROQ_API_KEY" in st.secrets:
             engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
-    except:
-        pass
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
-            engines["gemini"] = genai.GenerativeModel('gemini-2.0-flash')
     except:
         pass
     return engines
@@ -112,7 +105,7 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# --- 5. AI 權重診斷腦 (移除新聞參數) ---
+# --- 5. AI 權重診斷腦 (僅保留 Groq) ---
 
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
@@ -139,13 +132,9 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
                           {"role": "user", "content": prompt}]
             )
             return "🔥 策略室： " + completion.choices[0].message.content
-        except: pass
+        except: 
+            return "⚠️ 分析引擎調用失敗 (Groq)"
         
-    if ai_engines["gemini"]:
-        try:
-            res = ai_engines["gemini"].generate_content(prompt)
-            return "🔮 戰略部： " + res.text
-        except: return "⚠️ 分析師會議中 (API 忙碌)"
     return "❌ 分析引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
@@ -172,31 +161,38 @@ with col_t: st.title("🖥️ 測試 全數據 AI 版")
 with col_r: timer_placeholder = st.empty()
 
 tickers = {
-    "2330.TW": {"name": "台積電", "adr": "TSM"}, "NVDA": {"name": "輝達", "adr": None},
-    "MU": {"name": "美光", "adr": None}, "000660.KS": {"name": "海力士", "adr": None},
-    "2303.TW": {"name": "聯電", "adr": "UMC"}, "6770.TW": {"name": "力積電", "adr": None},
-    "2344.TW": {"name": "華邦電", "adr": None}, "3481.TW": {"name": "群創", "adr": None}, "1303.TW": {"name": "南亞", "adr": None}
+    "2330.TW": {"name": "台積電"}, "NVDA": {"name": "輝達"},
+    "MU": {"name": "美光"}, "000660.KS": {"name": "海力士"},
+    "2303.TW": {"name": "聯電"}, "6770.TW": {"name": "力積電"},
+    "2344.TW": {"name": "華邦電"}, "3481.TW": {"name": "群創"}, "1303.TW": {"name": "南亞"}
 }
 
 data_list = []
 
 with st.spinner('同步數據與 AI 運算中...'):
-    vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
-    sox = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
-    us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
+    try:
+        vix = yf.Ticker("^VIX").history(period="5d")['Close'].iloc[-1]
+        sox = yf.Ticker("^SOX").history(period="1mo")
+        sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
+        us10y = yf.Ticker("^TNX").history(period="5d")['Close'].iloc[-1]
+    except:
+        vix, sox_status, us10y = 20.0, "☁️ N/A", 4.0
 
     for ticker, info in tickers.items():
         try:
             stock = yf.Ticker(ticker)
-            s_info = stock.info
             df = stock.history(period="1y")
+            time.sleep(0.2) # 避免 API 請求過快導致失敗
+            
+            if df.empty or len(df) < 20: 
+                continue
+            
             df_w = stock.history(period="2y", interval="1wk")
-            if df.empty: continue
+            s_info = stock.info
             
             close_val = df['Close'].iloc[-1]
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
-            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
+            vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean() if not df['Volume'].iloc[-6:-1].empty else 1.0
             
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
@@ -204,7 +200,7 @@ with st.spinner('同步數據與 AI 運算中...'):
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1]
+            rsi_val = (100 - (100 / (1 + gain/loss))).iloc[-1] if not loss.iloc[-1] == 0 else 50
             atr_val = (df['High']-df['Low']).rolling(14).mean().iloc[-1]
             
             chip_flow = get_institutional_flow(df)
@@ -236,7 +232,7 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "chip_flow": chip_flow, "trend": trend_label
             })
         except Exception as e:
-            st.warning(f"跳過 {ticker}: {e}")
+            st.sidebar.warning(f"跳過 {ticker}: {e}")
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
