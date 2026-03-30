@@ -126,32 +126,37 @@ def get_volume_support(df):
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
 @st.cache_data(ttl=3600)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, us10y):
-    # 增加美債判斷邏輯
-    yield_status = "【慘烈】利率屠刀高掛" if us10y > 4.5 else "【緩和】環境尚可"
+    # 決定利率環境的標籤
+    interest_context = "【利率屠刀】估值殺盤期" if us10y > 4.5 else "【資金充裕】多頭暖冬"
     
+    # 針對 Groq 的直球 Prompt
     prompt = f"""
-    你現在是華爾街最毒舌、最直接的對沖基金操盤手。
-    針對標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
-    技術面：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
-    當前 10Y 美債殖利率：{us10y}% ({yield_status})
+    標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
+    數據：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    環境：10Y美債利率 {us10y}% ({interest_context})
     
-    【指令】
-    1. 結合目前(2026年3月)地緣政治衝突(如供應鏈斷裂風險)與美債波動，直接點出這檔標的是在「找死」還是在「撿便宜」。
-    2. 禁止使用「可能」、「產生一定影響」、「建議謹慎」、「觀察」等官腔詞彙。
-    3. 如果數據很爛，就直接叫我撤退；如果數據很好，就叫我全倉。
-    
-    字數 100 字內，越狠越好。
+    指令：
+    1. 結合 2026 年 3 月最新的地緣政治（如台海摩擦、中東能源）與美債波動，直接點出這檔標的是「送死」還是「機會」。
+    2. 禁止說『產生一定影響』、『建議觀察』、『謹慎操作』等廢話。
+    3. 語氣要像對沖基金主管，數據爛就噴，數據好就叫我梭哈。
+    4. 限制 100 字內。
     """
+
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
-                          {"role": "user", "content": prompt}]
+                messages=[
+                    {"role": "system", "content": "你是一位說話極度直接、討厭官腔、專精於地緣政治與利差交易的華爾街資深策略家。"},
+                    {"role": "user", "content": prompt}
+                ]
             )
-            return "🔥 策略室： " + completion.choices[0].message.content
-        except: pass
-    return "❌ 引擎未啟動"
+            # 把原本的 return 換成這個，確保看到最狠的診斷
+            return "🔥 策略室(直球)： " + completion.choices[0].message.content
+        except Exception as e:
+            return f"⚠️ 策略室斷線 ({str(e)})"
+            
+    return "❌ Groq 引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
