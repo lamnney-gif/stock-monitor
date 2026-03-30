@@ -1,56 +1,32 @@
 name: 4h AI Strategist
-
 on:
   schedule:
     - cron: '0 */4 * * *'
   workflow_dispatch:
-
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      # 🟢 關鍵 1：抓取完整歷史，防止 pull --rebase 時找不到基準點 (解決 128)
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 
-
+      - uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
       - name: Install deps
-        run: pip install groq pandas
-
+        run: pip install groq
       - name: Run AI
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
           GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
         run: python analyzer.py
-
-      - name: Force Push AI Results
+      - name: Push
+        env:
+          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # 🟢 關鍵 2：暴力解決 Exit Code 128
-          # 先清理可能鎖死的索引，再強制拉取遠端最新動態
-          git gc --prune=now
-          git remote update
-          
-          for i in {1..5}; do
-            git pull --rebase origin main
-            git add analysis_results.json
-            
-            # 如果沒變動就直接退出，不報錯
-            if git diff --staged --quiet; then
-              echo "No changes to commit"
-              exit 0
-            fi
-            
-            git commit -m "🧠 AI Update: $(date +'%Y-%m-%d %H:%M:%S')"
-            git push origin main && exit 0 || (sleep 10 && git pull --rebase origin main)
-          done
+          git config --local user.name "AI-Bot"
+          git add analysis_results.json
+          git commit -m "🧠 AI 戰略報告更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
