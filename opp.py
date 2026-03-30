@@ -111,25 +111,29 @@ CARD_STYLE = Template("""
 </div>
 """)
 
-# --- 5. 數據渲染 ---
 ticker_list = ["2330.TW", "NVDA", "MU", "000660.KS", "2303.TW", "6770.TW", "2344.TW", "3481.TW", "1303.TW"]
 names = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 
 for tk in ticker_list:
     d = raw_db.get("stocks", {}).get(tk, {})
-    report_content = ai_db.get("reports", {}).get(tk, "🤖 分析同步中...")
-    report_clean = str(report_content).replace("\n", "<br>").replace("'", "&apos;")
+    price = d.get('price', 0)
+    atr = d.get('atr', 0)
+    
+    # 💡 這裡手動計算更合理的「2倍 ATR 防守價」
+    safe_stop = round(price - (atr * 2), 2) if price and atr else "---"
+    atr_per = round((atr / price) * 100, 2) if price and atr else 0
+    dist_per = round(((price - safe_stop) / price) * 100, 2) if price and safe_stop != "---" else 0
 
-    html_output = CARD_STYLE.safe_substitute(
+    st.markdown(CARD_STYLE.safe_substitute(
         NAME=names.get(tk, tk), TICKER=tk,
-        PRICE=str(d.get('price', '---')), PE=str(d.get('pe', '---')),
+        PRICE=str(price), PE=str(d.get('pe', '---')),
         GROWTH=str(d.get('growth', '---')), RSI=str(d.get('rsi', '---')),
         CHIPS=str(d.get('chips', '---')), VOL_RATIO=str(d.get('volume_ratio', '---')),
         BUY_POINT=str(d.get('buy_point', '---')), SUPPORT=str(d.get('support', '---')),
-        PRESSURE=str(d.get('pressure', '---')), ATR=str(d.get('atr', '---')),
-        TURNOVER=str(d.get('turnover_zone', '---')), REPORT=report_clean
-    )
-    st.markdown(html_output, unsafe_allow_html=True)
+        PRESSURE=str(d.get('pressure', '---')), ATR=str(atr),
+        SAFE_STOP=str(safe_stop), DIST=str(dist_per), ATR_PER=str(atr_per),
+        REPORT=ai_db.get("reports", {}).get(tk, "分析同步中...")
+    ), unsafe_allow_html=True)
 
 # ---6. 底部：驅動 60 秒刷新 ---
 # 這裡必須使用上面定義好的 refresh_timer
