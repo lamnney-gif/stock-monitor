@@ -133,7 +133,7 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
-@st.cache_data(ttl=14400, show_spinner=False)
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     
@@ -156,7 +156,6 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
     
     if ai_engines["groq"]:
         try:
-            time.sleep(1.5)
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
@@ -213,8 +212,6 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
-            # --- [新增] 控制請求頻率，避免 API 報錯 ---
-            time.sleep(1.5)
             # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
             current_news = get_google_news(info['name'])
             news_dict[info['name']] = current_news
@@ -226,24 +223,7 @@ with st.spinner('同步數據與 AI 運算中...'):
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
             
-           # --- 原有行情數據 ---
             close_val = df['Close'].iloc[-1]
-            
-            # --- [新增] 計算上限 (Upper Limit) 邏輯 ---
-            # 取得前一天的收盤價來算漲跌停
-            prev_close = df['Close'].iloc[-2] if len(df) > 1 else close_val
-            
-            if ".TW" in ticker:
-                # 台股邏輯：上限為前一日收盤價 +10% (漲停價)
-                upper_limit = prev_close * 1.10 
-                limit_label = "今日漲停價"
-            else:
-                # 美股邏輯：取過去 20 日最高點作為波段壓力上限
-                upper_limit = df['High'].tail(20).max() 
-                limit_label = "波段壓力區"
-            # ---------------------------------------
-
-            # --- 原有技術指標 ---
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
@@ -286,12 +266,10 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
                 "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label,
-                "upper_limit": round(upper_limit, 2), # 存入上限
-                "limit_label": limit_label          # 存入標籤
+                "chip_flow": chip_flow, "trend": trend_label
             })
         except Exception as e:
-            st.error(f"跳過 {ticker}: {e}")
+            st.warning(f"跳過 {ticker}: {e}")
 
 # --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
@@ -326,19 +304,11 @@ for d in data_list:
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
                 <b>🧪 邏輯回測參數：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div><span class="price-label">🟢 建議買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
-                    <div><span class="price-label">🎯 技術壓力</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
-    
+                    <div><span class="price-label">🟢 觀察買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
                     <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
-    
-                    <div>
-                        <span class="price-label">🚫 {d['limit_label']}</span><br>
-                        <span class="price-value" style="color:#722ed1;">{d['upper_limit']}</span>
-                    </div>
-                    <div>
-                        <span class="price-label">📉 支撐分佈</span><br>
-                        <span class="price-value">{d['sup']}</span>
-
+                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
+                    <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div>
                 </div>
             </div>
         </div>
