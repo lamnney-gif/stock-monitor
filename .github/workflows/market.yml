@@ -4,32 +4,26 @@ on:
     - cron: '*/1 * * * *'
   workflow_dispatch:
 jobs:
-  update-market:
+  update:
     runs-on: ubuntu-latest
-    # 加入權限設定，允許 Action 寫入你的 Repository
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v3
-      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install yfinance pandas  # <--- 確保這兩個都有裝
-          
-      - name: Run Market Fetcher
+      - name: Install deps
+        run: pip install yfinance pandas
+      - name: Run Fetcher
         run: python fetcher.py
-        
-      - name: Commit and Push Data
+      - name: Push
+        env:
+          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "MarketBot"
           git add data_raw.json
-          # 如果檔案沒變動，git commit 會報錯，用 || exit 0 跳過
-          git commit -m "📈 實時行情更新: $(date)" || exit 0
+          git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
           git push
