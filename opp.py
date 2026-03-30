@@ -24,26 +24,24 @@ with col_time1:
     refresh_timer = st.empty() # 只留刷新倒數，行情存檔時間已刪
 
 with col_time2:
-    ai_last_time_str = ai_db.get("last_update", "---").strip() # .strip() 去除隱藏空格
+    ai_last_time_str = ai_db.get("last_update", "---").strip()
     if ai_last_time_str != "---":
         try:
-            # 強制解析格式
             last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
             next_dt = last_dt + timedelta(hours=4)
+            # 計算差距（秒）
             diff_seconds = int((next_dt - now_tw).total_seconds())
             
-            # 💡 關鍵：如果 diff_seconds 在 0 到 4 小時內，正常倒數
             if 0 < diff_seconds <= 14400:
                 hrs = diff_seconds // 3600
                 mins = (diff_seconds % 3600) // 60
                 st.info(f"🤖 AI 下次改版倒數: {hrs}時 {mins}分")
-            # 💡 關鍵：如果已經過期 (diff <= 0)，顯示更新中
             else:
-                st.warning("⏳ AI 診斷：新一輪數據同步中 (GitHub Actions 延遲)...")
+                # 💡 這裡加入診斷資訊，幫你抓出為什麼變咖啡色
+                st.warning(f"⏳ 同步中... (偏離值: {diff_seconds}秒)")
+                # 如果偏離太誇張（比如負好幾萬秒），代表時區設錯了
         except Exception as e:
-            st.error(f"⚠️ 時間格式解析錯誤: {e}")
-    else:
-        st.info("🤖 AI 診斷：等待首次同步中...")
+            st.error(f"⚠️ 格式錯誤: {e}")
 
 # --- 3. 免責聲明 ---
 st.markdown("""
