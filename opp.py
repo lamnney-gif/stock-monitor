@@ -16,9 +16,6 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-import time
-from datetime import datetime, timezone
-
 # --- 2. 狀態列：精準倒數邏輯 ---
 # 修正：將變數名稱統一為 col_refresh 和 col_status2
 col_refresh, col_status2 = st.columns(2)
@@ -67,22 +64,6 @@ with col_status2:
             st.success(f"📈 行情下次更新：{int(raw_rem//60)} 分 {int(raw_rem%60)} 秒後")
         else:
             st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
-
-    # --- A. AI 診斷倒數 (4小時 = 240分鐘) ---
-    ai_rem = get_remaining_seconds(ai_time_str, 240)
-    if ai_rem is not None:
-        if ai_rem > 0:
-            st.info(f"🤖 AI 下次改版：{ai_rem//3600}時 {(ai_rem%3600)//60}分後")
-        else:
-            st.warning(f"⏳ AI 同步中... (上次更新: {ai_time_str})")
-
-    # --- B. 行情數據倒數 (15分鐘) ---
-    raw_rem = get_remaining_seconds(raw_time_str, 15)
-    if raw_rem is not None:
-        # 如果算出來數字還是大得離譜（例如 > 15分鐘），代表兩邊都是本地時間，不需要轉 UTC
-        # 這裡做一個自動修正保險：
-        if raw_rem > 1000: 
-            raw_rem -= 28800 # 扣掉 8 小時
             
         if raw_rem > 0:
             st.success(f"📈 行情下次更新：{raw_rem//60} 分 {raw_rem%60} 秒後")
