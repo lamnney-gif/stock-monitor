@@ -2,9 +2,13 @@ import yfinance as yf
 import pandas as pd
 import json
 import os
+import time
+from datetime import datetime, timedelta
+from groq import Groq
 
-# 強制使用台灣時間 (UTC+8)
-def get_tw_time():
+# --- 核心：強制台北時間 ---
+def get_taiwan_now():
+    # 取得 UTC 時間並強制 +8 小時
     return datetime.utcnow() + timedelta(hours=8)
 
 def calculate_rsi(series, period=14):
@@ -14,66 +18,64 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return round(100 - (100 / (1 + rs)).iloc[-1], 2)
 
-def fetch_stock_data():
+def run_pipeline():
     tickers = {
         "2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", 
         "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", 
         "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"
     }
     
-    result = {"stocks": {}}
-
-    for symbol, name in tickers.items():
+    # 1. 抓取行情數據
+    raw_data = {"stocks": {}}
+    for sym, name in tickers.items():
         try:
-            print(f"正在抓取 {name} ({symbol})...")
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="1mo") # 抓一個月數據算 RSI
-            info = ticker.info
-
-            if hist.empty: continue
-
-            # 1. 基礎數據
-            current_price = round(hist['Close'].iloc[-1], 2)
-            prev_close = hist['Close'].iloc[-2]
+            tk = yf.Ticker(sym)
+            df = tk.history(period="1mo")
+            if df.empty: continue
             
-            # 2. RSI 計算 (14日)
-            rsi_val = calculate_rsi(hist['Close'])
-
-            # 3. 量比計算 (當前量 / 5日均量)
-            avg_vol_5d = hist['Volume'].iloc[-6:-1].mean()
-            current_vol = hist['Volume'].iloc[-1]
-            vol_ratio = round(current_vol / avg_vol_5d, 2) if avg_vol_5d > 0 else 1.0
-
-            # 4. 支撐壓力與 ATR (簡單模擬邏輯)
-            std_dev = hist['Close'].rolling(20).std().iloc[-1]
-            support = round(current_price - (std_dev * 1.5), 2)
-            pressure = round(current_price + (std_dev * 1.5), 2)
-            atr = round(std_dev, 2)
-
-            # 5. 籌碼狀態 (模擬邏輯，實際需對接交易所 API)
-            chips_status = "🔥 強勢" if rsi_val > 60 else "☁️ 盤整"
-            if rsi_val < 30: chips_status = "❄️ 超跌"
-
-            result["stocks"][symbol] = {
-                "price": current_price,
-                "pe": info.get('trailingPE', '---'),
-                "growth": f"{info.get('revenueGrowth', 0)*100:.1f}%",
-                "rsi": rsi_val,
-                "volume_ratio": vol_ratio,
-                "chips": chips_status,
-                "support": support,
-                "pressure": pressure,
-                "atr": atr,
-                "turnover_zone": round(current_price * 0.98, 2), # 密集換手區模擬
-                "buy_point": round(support * 1.02, 2)
+            cur_price = round(df['Close'].iloc[-1], 2)
+            rsi = calculate_rsi(df['Close'])
+            vol_avg = df['Volume'].iloc[-6:-1].mean()
+            v_ratio = round(df['Volume'].iloc[-1] / vol_avg, 2) if vol_avg > 0 else 1.0
+            std = df['Close'].rolling(20).std().iloc[-1]
+            
+            raw_data["stocks"][sym] = {
+                "name": name, "price": cur_price, "rsi": rsi,
+                "volume_ratio": v_ratio, "pe": tk.info.get('trailingPE', '---'),
+                "growth": f"{tk.info.get('revenueGrowth', 0)*100:.1f}%",
+                "chips": "🔥 強勢" if rsi > 60 else "☁️ 盤整",
+                "support": round(cur_price - (std * 1.5), 2),
+                "pressure": round(cur_price + (std * 1.5), 2),
+                "atr": round(std, 2),
+                "turnover_zone": round(cur_price * 0.98, 2), # 密集換手區
+                "buy_point": round(cur_price - (std * 1.3), 2)
             }
-        except Exception as e:
-            print(f"{symbol} 抓取失敗: {e}")
+            print(f"✅ {name} 數據 OK")
+        except: print(f"❌ {sym} 失敗")
 
-    # 寫入 JSON
     with open("data_raw.json", "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=4)
-    print("✅ data_raw.json 更新完成！")
+        json.dump(raw_data, f, ensure_ascii=False, indent=4)
+
+    # 2. AI 診斷 (同步存入台北時間)
+    tw_now = get_taiwan_now()
+    ai_results = {"last_update": tw_now.strftime("%Y-%m-%d %H:%M:%S"), "reports": {}}
+    
+    api_key = os.getenv("GROQ_API_KEY_1")
+    if api_key:
+        client = Groq(api_key=api_key)
+        for ticker, data in raw_data["stocks"].items():
+            try:
+                prompt = f"分析{data['name']}：現價{data['price']}、RSI{data['rsi']}。含【一句話死穴】與【最終決斷】。繁體中文。"
+                res = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "system", "content": "資深策略家"}, {"role": "user", "content": prompt}]
+                )
+                ai_results["reports"][ticker] = res.choices[0].message.content
+                time.sleep(1)
+            except: pass
+            
+    with open("analysis_results.json", "w", encoding="utf-8") as f:
+        json.dump(ai_results, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
-    fetch_stock_data()
+    run_pipeline()
