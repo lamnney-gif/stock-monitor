@@ -155,9 +155,8 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
     【輸出格式】
     【一句話死穴】：（直接定生死，例如：高PE配負成長=典型價值陷阱）
     【消息面黑幕】：（產業+地緣政治+資金真相）
-    【最終決斷】：（只能選：梭哈 / 砍單 / 空手）
 
-    限制120字內
+    限制200字內
     """
 
     if ai_engines["groq"]:
