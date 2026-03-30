@@ -2,33 +2,48 @@ import streamlit as st
 import json
 import os
 import time
+from datetime import datetime, timedelta
 from string import Template
 
-st.set_page_config(page_title="測試戰情室", layout="wide")
+st.set_page_config(page_title="半導體大戶戰情室", layout="wide")
 
 # --- 1. 數據載入 ---
 def load_data():
     raw_p, ai_p = "data_raw.json", "analysis_results.json"
-    try:
-        r = json.load(open(raw_p, "r", encoding="utf-8")) if os.path.exists(raw_p) else {"stocks": {}}
-        a = json.load(open(ai_p, "r", encoding="utf-8")) if os.path.exists(ai_p) else {"reports": {}}
-    except:
-        r, a = {"stocks": {}}, {"reports": {}}
+    r = json.load(open(raw_p, "r", encoding="utf-8")) if os.path.exists(raw_p) else {"stocks": {}}
+    a = json.load(open(ai_p, "r", encoding="utf-8")) if os.path.exists(ai_p) else {"reports": {}, "last_update": "---"}
     return r, a
 
-# --- 2. 免責聲明 ---
+raw_db, ai_db = load_data()
+
+# --- 2. 倒數計時器區塊 ---
+col_time1, col_time2 = st.columns(2)
+
+# 網頁刷新倒數 (60秒)
+with col_time1:
+    refresh_timer = st.empty()
+
+# AI 分析倒數 (假設 4 小時更新一次)
+with col_time2:
+    ai_last_time_str = ai_db.get("last_update", "---")
+    if ai_last_time_str != "---":
+        last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
+        next_dt = last_dt + timedelta(hours=4)
+        diff = next_dt - datetime.now()
+        ai_msg = f"🤖 AI 下次改版倒數: {max(0, diff.seconds // 3600)}時 {(diff.seconds // 60) % 60}分"
+    else:
+        ai_msg = "🤖 AI 更新時間：等待同步中"
+    st.info(ai_msg)
+
+# --- 3. 免責聲明 ---
 st.markdown("""
-<div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:25px;">
-    <h3 style="color:#ef6c00; margin:0;">⚠️ 系統使用免責聲明</h3>
-    <p style="color:#5d4037; font-size:0.9em; margin-top:5px;">
-    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
-    2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
-    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
-    </p>
+<div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
+    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️ 系統使用免責聲明</h3>
+    <p style="color:#5d4037; font-size:0.85em; margin:5px 0 0 0;">本平台數據僅供研究參考，投資者應自行評估風險並自負損益。</p>
 </div>
 """, unsafe_allow_html=True)
 
+# 授權檢查
 if "auth" not in st.session_state: st.session_state["auth"] = False
 if not st.session_state["auth"]:
     if st.text_input("授權碼", type="password") == "8888":
@@ -36,7 +51,7 @@ if not st.session_state["auth"]:
         st.rerun()
     st.stop()
 
-# --- 3. HTML 模板 (補回風控與市場分佈區塊) ---
+# --- 4. HTML 模板 (含風控與密集換手區) ---
 CARD_STYLE = Template("""
 <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: sans-serif; margin-bottom: 30px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -72,36 +87,29 @@ CARD_STYLE = Template("""
 </div>
 """)
 
-# --- 4. 數據渲染 ---
-raw_db, ai_db = load_data()
+# --- 5. 數據渲染 ---
 ticker_list = ["2330.TW", "NVDA", "MU", "000660.KS", "2303.TW", "6770.TW", "2344.TW", "3481.TW", "1303.TW"]
 names = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 
 for tk in ticker_list:
     d = raw_db.get("stocks", {}).get(tk, {})
-    
-    # 抓取 AI 報告
     report_content = ai_db.get("reports", {}).get(tk, "🤖 分析同步中...")
     report_clean = str(report_content).replace("\n", "<br>").replace("'", "&apos;")
 
-    # 填充 HTML
     html_output = CARD_STYLE.safe_substitute(
-        NAME=names.get(tk, tk),
-        TICKER=tk,
-        PRICE=str(d.get('price', '---')),
-        PE=str(d.get('pe', '---')),
-        GROWTH=str(d.get('growth', '---')),
-        RSI=str(d.get('rsi', '---')),
-        CHIPS=str(d.get('chips', '---')),
-        VOL_RATIO=str(d.get('volume_ratio', '---')),
-        BUY_POINT=str(d.get('buy_point', '---')),
-        SUPPORT=str(d.get('support', '---')),
-        PRESSURE=str(d.get('pressure', '---')),
-        ATR=str(d.get('atr', '---')),
-        TURNOVER=str(d.get('turnover_zone', '---')),
-        REPORT=report_clean
+        NAME=names.get(tk, tk), TICKER=tk,
+        PRICE=str(d.get('price', '---')), PE=str(d.get('pe', '---')),
+        GROWTH=str(d.get('growth', '---')), RSI=str(d.get('rsi', '---')),
+        CHIPS=str(d.get('chips', '---')), VOL_RATIO=str(d.get('volume_ratio', '---')),
+        BUY_POINT=str(d.get('buy_point', '---')), SUPPORT=str(d.get('support', '---')),
+        PRESSURE=str(d.get('pressure', '---')), ATR=str(d.get('atr', '---')),
+        TURNOVER=str(d.get('turnover_zone', '---')), REPORT=report_clean
     )
     st.markdown(html_output, unsafe_allow_html=True)
 
-time.sleep(60)
+# --- 6. 動態倒數計時邏輯 ---
+for i in range(60, 0, -1):
+    refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{i} 秒")
+    time.sleep(1)
+
 st.rerun()
