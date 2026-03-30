@@ -6,46 +6,53 @@ import feedparser
 from datetime import datetime
 from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
-import google.generativeai as genai
 import time
 import random
 from groq import Groq
 
-# 1. 頁面配置
-st.set_page_config(page_title="Beta Lab AI Ultimate - 穩定防護版", layout="wide")
+# 1. 頁面配置 (1600px 寬版)
+st.set_page_config(page_title="Beta Lab AI Ultimate - Groq 穩定版", layout="wide")
 
-# --- 2. AI 核心啟動 ---
+# --- 2. AI 核心啟動 (僅保留 Groq) ---
 @st.cache_resource
 def init_ai_engines():
-    engines = {"gemini": None, "groq": None}
+    engines = {"groq": None}
+    # 初始化 Groq
     try:
         if "GROQ_API_KEY" in st.secrets:
             engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
-    except: pass
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
-            engines["gemini"] = genai.GenerativeModel('gemini-2.0-flash')
-    except: pass
+    except:
+        pass
     return engines
 
+# 呼叫初始化
 ai_engines = init_ai_engines()
 
-# 2. 私密存取驗證
+# 2. 修改後的私密存取驗證 (加入防呆，防止掛機報錯)
 def check_password():
-    if st.session_state.get("password_correct", False): return True
+    # 如果已經驗證成功了，直接過
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # 顯示登入介面
     st.markdown("### 🖥️ 內部開發監測系統 V6.8")
+    
+    # 使用 .get() 來安全讀取，避免 KeyError
     pwd = st.text_input("請輸入存取密碼：", type="password", key="password_input")
-    if pwd:
+    
+    if pwd: # 如果使用者有輸入東西
         if pwd == "8888":
             st.session_state["password_correct"] = True
-            st.rerun()
+            st.rerun() # 驗證成功立即重整
         else:
             st.error("😕 驗證失敗")
             return False
+            
     return False
 
-if not check_password(): st.stop()
+# 呼叫檢查
+if not check_password():
+    st.stop()
 
 # 3. CSS 樣式 (一字不漏保留)
 st.markdown("""
@@ -68,7 +75,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄與警告 ---
+# --- 側邊欄：法律防護區 ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px;">
@@ -82,6 +89,7 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# --- 主頁面置頂警告 ---
 st.markdown("""
 <div class="mobile-warning">
     <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境 (Beta Lab)</b><br>
@@ -92,7 +100,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. 核心演算
+# 4. 核心演算函數
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -116,25 +124,29 @@ def get_google_news(keyword):
     except: pass
     return news
 
-# --- 5. AI 權重診斷腦 ---
+# --- 5. AI 權重診斷腦 (僅保留 Groq + 字數硬壓縮) ---
+
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
-    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
-    prompt = f"你現在是(Goldman Sachs)全球策略首席分析師...{name} 現價:{price} PE:{pe} RSI:{rsi:.1f} 籌碼:{chip_flow} 趨勢:{trend} 新聞:{news_context}..."
-    if ai_engines["groq"]:
-        try:
-            completion = ai_engines["groq"].chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位資深策略家。"}, {"role": "user", "content": prompt}]
-            )
-            return "🔥 策略室： " + completion.choices[0].message.content
-        except: pass
-    if ai_engines["gemini"]:
-        try:
-            res = ai_engines["gemini"].generate_content(prompt)
-            return "🔮 戰略部： " + res.text
-        except: return "⚠️ 分析師會議中"
-    return "❌ 未啟動"
+    if not ai_engines["groq"]: return "❌ Groq 引擎未啟動"
+    
+    news_context = " | ".join(news_list) if news_list else "無重大新聞"
+    
+    # 強制精簡 Prompt
+    prompt = f"""
+    標的:{name},價:{price},PE:{pe},RSI:{rsi:.1f},籌碼:{chip_flow},趨勢:{trend},新聞:{news_context}。
+    你是策略首席，請給出『一句話』實戰建議。禁廢話與標題，限60字內。
+    """
+    
+    try:
+        completion = ai_engines["groq"].chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": "你是一位說話極其精煉的資本市場策略家。"},
+                      {"role": "user", "content": prompt}]
+        )
+        return "🔥 策略室： " + completion.choices[0].message.content[:85]
+    except:
+        return "⚠️ 策略室繁忙中"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 0
@@ -146,15 +158,17 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     if week_trend == "UP": score += 15
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
-    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], tuple(news))
+
+    ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'], news)
+    
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
     elif score >= 65: return score, f"🔎 【分批佈局】{ai_report}", "✅"
     elif score >= 45: return score, f"⚠️ 【觀望等待】{ai_report}", "⚠️"
     else: return score, f"☢️ 【全面避險】{ai_report}", "☢️"
 
-# 6. 主頁面
+# 6. 主頁面與清單
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ 穩定全數據 AI 版")
+with col_t: st.title("🖥️ 測試 全數據 AI 版 (Groq)")
 with col_r: timer_placeholder = st.empty()
 
 tickers = {
@@ -166,30 +180,25 @@ tickers = {
 
 data_list, news_dict = [], {}
 
-with st.spinner('正在與數據中心同步 (加入防 Rate Limit 延遲)...'):
-    # 獲取大盤數據
+with st.spinner('數據同步中...'):
+    # 全域風險指標
     vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
-    sox_df = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "📈 BULL" if sox_df['Close'].iloc[-1] > sox_df['Close'].mean() else "📉 BEAR"
+    sox = yf.Ticker("^SOX").history(period="1mo")
+    sox_status = "📈 BULL" if sox['Close'].iloc[-1] > sox['Close'].mean() else "📉 BEAR"
     us10y = yf.Ticker("^TNX").history(period="1d")['Close'].iloc[-1]
 
     for ticker, info in tickers.items():
         try:
-            # 隨機延遲 0.5~1.5秒，避免被 Yahoo 偵測為爬蟲
-            time.sleep(random.uniform(0.5, 1.5))
-            
-            s_obj = yf.Ticker(ticker)
-            df = s_obj.history(period="1y")
-            df_w = s_obj.history(period="2y", interval="1wk")
-            
-            # 針對最容易報錯的 info 進行保護
-            try:
-                s_info = s_obj.info
-            except:
-                s_info = {} # 即使 info 報錯也繼續執行
-            
+            time.sleep(random.uniform(0.5, 1.0)) # 防 Rate Limit
+            stock = yf.Ticker(ticker)
+            df = stock.history(period="1y")
+            df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
             
+            # 嘗試抓 info，失敗則用默認值
+            try: s_info = stock.info
+            except: s_info = {}
+
             close_val = df['Close'].iloc[-1]
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / (df['Volume'].iloc[-6:-1].mean() + 1e-9)
@@ -207,7 +216,6 @@ with st.spinner('正在與數據中心同步 (加入防 Rate Limit 延遲)...'):
             ma5, ma10 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1]
             trend_label = "🌟 多頭排列" if ma5 > ma10 > ma20 else "💀 空頭排列" if ma5 < ma10 < ma20 else "🌀 趨勢不明"
             bias = ((close_val - ma20) / ma20) * 100
-            slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
@@ -215,55 +223,57 @@ with st.spinner('正在與數據中心同步 (加入防 Rate Limit 延遲)...'):
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
-            news = get_google_news(info['name'])
-            news_dict[info['name']] = news
-            
+            current_news = get_google_news(info['name'])
+            news_dict[info['name']] = current_news
+
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
                 {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': f"{pe_val:.1f}", 'rev': f"{rev_growth:.1f}%"},
-                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name'], news
+                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name'], current_news
             )
 
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": f"{pe_val:.1f}", "rev": f"{rev_growth:.1f}%",
                 "stop": round(dynamic_stop, 2), "stop_line": round(stop_profit_line, 2), "chip_floor": round(chip_floor, 2),
-                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "slope": round(slope, 2),
-                "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
-                "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
-                "chip_flow": chip_flow, "trend": trend_label
+                "rsi": round(rsi_val, 1), "vol": round(vol_ratio, 1), "bias": round(bias, 2), "sup": round(tech_sup, 2), "pre": round(tech_pre, 2),
+                "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%", "chip_flow": chip_flow, "trend": trend_label
             })
-        except Exception as e:
-            st.error(f"⚠️ {ticker} 載入失敗 (Yahoo 限制中): {e}")
+        except: continue
 
-# UI 渲染部分保持不變
+# --- UI 渲染 ---
 st.sidebar.markdown(f"📊 **全球風險監控**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
 for name, news in news_dict.items():
-    with st.sidebar.expander(f"📰 {name} 相關動態"):
+    with st.sidebar.expander(f"📰 {name} 動態"):
         for n in news: st.markdown(n)
 
 for d in data_list:
     st.markdown(f"""
     <div class="status-card {d['style']}">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div><span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span><span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span></div>
-            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']} | 成交量比: {d['vol']}x</span>
+            <div>
+                <span style="font-size: 1.6em; font-weight: bold;">{d['icon']} {d['name']}</span>
+                <span style="font-size: 2.2em; margin-left: 20px; font-family: monospace; font-weight: bold;">${d['price']}</span>
+            </div>
+            <span class="metric-tag">RSI: {d['rsi']} | 籌碼: {d['chip_flow']}</span>
         </div>
         <div style="margin-top: 10px; color: #595959; font-size: 0.9em;">
-            趨勢: {d['trend']} | <b>本益比: {d['pe']}</b> | <b>營收成長: {d['rev']}</b> | 乖離率: {d['bias']}% | 機構: {d['inst']}
+            趨勢: {d['trend']} | 本益比: {d['pe']} | 乖離率: {d['bias']}% | 機構: {d['inst']}
         </div>
         <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
         <div style="display: flex; gap: 25px;">
             <div style="flex: 2.2;">
-                <b>🧠 智權診斷 (AI 版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
-                <div class="defense-box">⚙️ <b>風控與成本模擬：</b> <span style="color:#1890ff;">營利防守: {d['stop_line']}</span> | <span style="color:#cf1322; font-weight:bold;">ATR地板: {d['stop']}</span> <br><b>換手區間: {d['chip_floor']}</b> | 支撐: {d['sup']}</div>
+                <b>🧠 智權診斷 (Groq 極簡版)：</b><br><span style="line-height:1.6; font-size:1.1em;">{d['ai_diag']}</span>
+                <div class="defense-box">
+                    ⚙️ <b>風控與成本模擬：</b> 
+                    止盈線: {d['stop_line']} | <span style="color:#cf1322; font-weight:bold;">止損地板: {d['stop']}</span> | 換手支撐: {d['chip_floor']}
+                </div>
             </div>
-            <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
-                <b>🧪 邏輯回測參數：</b><div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div><span class="price-label">🟢 觀察買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
-                <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
-                <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
-                <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
-                <div><span class="price-label">📈 壓力分佈</span><br><span class="price-value">{d['pre']}</span></div></div>
+            <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 12px; border: 1px solid #d9d9d9;">
+                <b>🧪 交易參考：</b><br>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div><span class="price-label">🟢 買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 壓力</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
+                </div>
             </div>
         </div>
     </div>
