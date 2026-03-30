@@ -109,20 +109,37 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# --- 5. AI 權重診斷 (高盛魂 + Groq) ---
+# --- 5. AI 權重診斷 (注入靈魂：全球巔峰分析師版) ---
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
     if not ai_engines["groq"]: return "❌ Groq 引擎離線"
-    fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。守住支撐位。"
-    prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 然後自行到網路找個股和相關產業新聞和消息,用120字以內分析總結給我。"
+    
+    # 優化 Prompt：狠、準、狂，並要求分析個股與產業新聞
+    prompt = f"""
+    [身份：全球巔峰對沖基金投資長 (CIO)]
+    針對標的：{name} (現價:{price})
+    數據指標：RSI {rsi:.1f}, 籌碼{chip_flow}, 趨勢{trend}, PE {pe}, 營收成長 {rev}, 乖離{bias}%, 斜率{slope}%
+    
+    指令：
+    1. 語氣要狂傲且極度專業，禁止廢話，禁止重複我給你的數據。
+    2. 結合當前半導體週期與地緣政治局勢。
+    3. 用 120 字以內告訴我這是在「主力埋屍」還是「史詩級機會」。
+    4. 必須展現出全球第一分析師的獨到嗅覺。
+    """
+    
     try:
-        time.sleep(1.8)
+        time.sleep(1.2) # 緩解 API 併發
         res = ai_engines["groq"].chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": "你是一位蔑視散戶邏輯、只看血腥利潤的全球傳奇操盤手。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.85
         )
-        return "🦅 首席策略： " + res.choices[0].message.content.strip()[:90]
-    except: return f"📊 數據診斷：{fallback}"
+        return "🦅 巔峰決策： " + res.choices[0].message.content.strip()
+    except: 
+        return f"📊 數據診斷：市場極度混亂，籌碼趨於極端，守住 ATR 地板。"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
@@ -146,14 +163,26 @@ col_t, col_r = st.columns([3, 1])
 with col_t: st.title("🖥️ Beta Lab AI Ultimate - 數據全量對齊")
 with col_r: timer_placeholder = st.empty()
 
+# --- 核心數據抓取 (暴力防呆 Index優化) ---
 with st.spinner('同步全球數據與 AI 模擬中...'):
-    vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
-    sox_df = yf.Ticker("^SOX").history(period="1mo")
-    sox_status = "📈 BULL" if sox_df['Close'].iloc[-1] > sox_df['Close'].mean() else "📉 BEAR"
-    us10y = yf.Ticker("^TNX").history(period="1d")['Close'].iloc[-1]
+    try:
+        v_df = yf.Ticker("^VIX").history(period="5d")
+        vix = round(v_df['Close'].iloc[-1], 2) if not v_df.empty else 20.0
+    except: vix = 20.0
+
+    try:
+        s_df = yf.Ticker("^SOX").history(period="1mo")
+        sox_status = "📈 BULL" if (not s_df.empty and s_df['Close'].iloc[-1] > s_df['Close'].mean()) else "📉 BEAR"
+    except: sox_status = "📉 BEAR"
+
+    try:
+        u_df = yf.Ticker("^TNX").history(period="1d")
+        us10y = u_df['Close'].iloc[-1] if not u_df.empty else 4.0
+    except: us10y = 4.0
 
     for ticker, name in tickers.items():
         try:
+            time.sleep(1.0) # 強制延遲防止 API 封鎖
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
@@ -164,7 +193,6 @@ with st.spinner('同步全球數據與 AI 模擬中...'):
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / (df['Volume'].iloc[-6:-1].mean() + 1e-9)
             
-            # --- 數據變數 (物理還原，絕不漏掉) ---
             pe_val = f"{s_info.get('trailingPE', 0):.1f}"
             rev_growth = f"{(s_info.get('revenueGrowth', 0) or 0) * 100:.1f}%"
             inst_hold = f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%"
@@ -181,14 +209,13 @@ with st.spinner('同步全球數據與 AI 模擬中...'):
             bias = round(((close_val - ma20) / ma20) * 100, 2)
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # 支撐位與防守
             chip_floor = get_volume_support(df)
             stop_line = df['High'].tail(5).max() * 0.97
             dynamic_stop = close_val - (2.5 * atr_val)
 
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
                 {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_val, 'rev': rev_growth, 'bias': bias, 'slope': round(slope,2)},
-                vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", name
+                vix, sox_status, "UP" if (not df_w.empty and close_val > df_w['Close'].mean()) else "DOWN", name
             )
 
             data_list.append({
