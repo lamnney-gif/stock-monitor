@@ -1,37 +1,29 @@
 import streamlit as st
 import json
 import os
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from string import Template
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="測試戰情室v.1", layout="wide")
 
 # --- 1. 數據載入 ---
 def load_data():
     raw_p, ai_p = "data_raw.json", "analysis_results.json"
-    r = json.load(open(raw_p, "r", encoding="utf-8")) if os.path.exists(raw_p) else {"stocks": {}}
+    r = json.load(open(raw_p, "r", encoding="utf-8")) if os.path.exists(raw_p) else {"stocks": {}, "last_update": "---"}
     a = json.load(open(ai_p, "r", encoding="utf-8")) if os.path.exists(ai_p) else {"reports": {}, "last_update": "---"}
     return r, a
 
 raw_db, ai_db = load_data()
 
-# --- 3. 頂部狀態列：最強力取餘數邏輯 ---
+# --- 2. 頂部狀態列 ---
 col_refresh, col_ai, col_market = st.columns(3)
-
-with col_refresh:
-    # 60秒網頁刷新
-    refresh_timer = st.empty()
-    refresh_timer.metric("🔄 網頁刷新", "60 秒")
 
 def get_countdown(time_str, limit_mins):
     if time_str == "---" or not time_str: return None
     try:
         target_dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
-        # 💡 不管時差幾小時，算絕對秒數差
         diff_total_sec = abs(int((datetime.now() - target_dt).total_seconds()))
-        
-        # 💡 核心：取餘數。例如差 469 分鐘，469 % 15 = 4 分鐘（已過去），15 - 4 = 11 分鐘（剩餘）
         limit_sec = limit_mins * 60
         passed_sec = diff_total_sec % limit_sec
         return limit_sec - passed_sec
@@ -39,35 +31,23 @@ def get_countdown(time_str, limit_mins):
         return None
 
 with col_ai:
-    # AI 4小時倒數
-    ai_rem = get_countdown(ai_db.get("last_update", ""), 240)
+    ai_rem = get_countdown(ai_db.get("last_update", ""), 240)  # 4 小時
     if ai_rem:
         st.info(f"🤖 AI 下次改版：{ai_rem // 3600}時 {(ai_rem % 3600) // 60}分後")
     else:
         st.info("🤖 AI 診斷同步中")
 
 with col_market:
-    # 行情 15分鐘倒數
-    raw_rem = get_countdown(raw_db.get("last_update", ""), 15)
+    raw_rem = get_countdown(raw_db.get("last_update", ""), 15)  # 15 分鐘
     if raw_rem:
-        # 這裡現在絕對會顯示在 0 ~ 15 分鐘之間，絕對不會有 400 多分
-        st.success(f"📈 行情更新：{raw_rem // 60} 分 {raw_rem % 60} 秒後")
+        st.success(f"📈 行情更新倒數：{raw_rem // 60} 分 {raw_rem % 60} 秒")
     else:
         st.success("📈 行情更新中")
-# --- 3. 免責聲明 ---
-st.markdown("""
-<div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
-    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️讀前必視：個人實驗開發環境</h3>
-    <p style="color:#5d4037; font-size:0.85em; margin:5px 0 0 0;">    
-    1. 本網頁為個人 <b>Python 量化模型開發測試用途</b>，僅供開發者本人觀測邏輯執行結果。<br><br>
-    2. 內文所載之所有價格、診斷報告皆為<b>程式演算法之實驗產出</b>，非屬任何形式之投資建議。<br><br>
-    3. 投資有風險，過去績效不代表未來表現。<b>任何閱覽者若據此進行交易，盈虧請自負</b>，本站開發者不承擔任何法律責任。<br><br>
-    4. 數據可能因 API 延遲或計算邏輯而有誤差，請以各交易所官方報價為準。
-    </p>
-</div>
-""", unsafe_allow_html=True)
 
-# 授權檢查
+with col_refresh:
+    refresh_timer = st.empty()
+
+# --- 3. 授權檢查 ---
 if "auth" not in st.session_state: st.session_state["auth"] = False
 if not st.session_state["auth"]:
     if st.text_input("授權碼", type="password") == "8888":
@@ -75,7 +55,7 @@ if not st.session_state["auth"]:
         st.rerun()
     st.stop()
 
-# --- 4. HTML 模板 (含風控與密集換手區) ---
+# --- 4. HTML 卡片模板 ---
 CARD_STYLE = Template("""
 <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: sans-serif; margin-bottom: 30px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -101,7 +81,7 @@ CARD_STYLE = Template("""
                 <b style="color:#333; font-size:0.9em;">⚙️ 風控與成本模擬：</b><br>
                 <span style="color:#1565c0; font-size:0.85em;">防守觀察點: $SUPPORT</span> | <span style="color:#c62828; font-size:0.85em;">ATR地板: $ATR</span>
             </div>
-            <div style="flex:1; min-width:150px;"><b style="color:#333; font-size:0.9em;">📊 市場分佈：</b><br><span style="color:#555; font-size:0.85em;">密集換手區(大部份買點): $TURNOVER</span></div>
+            <div style="flex:1; min-width:150px;"><b style="color:#333; font-size:0.9em;">📊 市場分佈：</b><br><span style="color:#555; font-size:0.85em;">密集換手區: $TURNOVER</span></div>
         </div>
     </div>
     <div style="background:rgba(255,255,255,0.8); padding:15px; border-radius:10px;">
@@ -131,11 +111,8 @@ for tk in ticker_list:
     )
     st.markdown(html_output, unsafe_allow_html=True)
 
-# ---6. 底部：驅動 60 秒刷新 ---
-# 這裡必須使用上面定義好的 refresh_timer
-for i in range(60, 0, -1):
-    refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{i} 秒")
-    time.sleep(1)
-
-# 時間到，強制重整
-st.rerun()
+# --- 6. 自動刷新 ---
+# 每 60 秒刷新一次頁面
+count = st_autorefresh(interval=60*1000, limit=None, key="auto_refresh")
+seconds_left = 60 - (count % 60)
+refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{seconds_left} 秒")
