@@ -1,32 +1,49 @@
 name: 4h AI Strategist
+
 on:
   schedule:
     - cron: '0 */4 * * *'
   workflow_dispatch:
+
+env:
+  # 🟢 方案 A：直接告訴 GitHub 我們要用 Node 24 跑這些舊組件
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      # 🟢 方案 B：直接升級組件版本到 v4 和 v5 (支援新版 Node)
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # 從 v3 升級到 v4
+        
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # 從 v4 升級到 v5
         with:
           python-version: '3.9'
-      - name: Install deps
-        run: pip install groq
-      - name: Run AI
+
+      - name: Install dependencies
+        run: pip install groq pandas
+
+      - name: Run AI Analyzer
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
-          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+          GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_1 }}
         run: python analyzer.py
-      - name: Push
-        env:
-          TZ: Asia/Taipei
+
+      - name: Force Push Results
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
-          git add analysis_results.json
-          git commit -m "🧠 AI 戰略報告更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
-          git push
+          # 採用暴力重試邏輯，確保 128 衝突不再發生
+          for i in {1..5}; do
+            git pull --rebase origin main
+            git add analysis_results.json
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+              exit 0
+            fi
+            git commit -m "🧠 AI Strategy Updated" && git push origin main && break || sleep 5
+          done
