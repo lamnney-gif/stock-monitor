@@ -16,21 +16,27 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 倒數計時器區塊 ---
+# --- 2. 倒數計時器區塊 (校準台北時間版) ---
 col_time1, col_time2 = st.columns(2)
+now_tw = datetime.utcnow() + timedelta(hours=8) # 強制台北現在時間
 
-# 網頁刷新倒數 (60秒)
 with col_time1:
     refresh_timer = st.empty()
 
-# AI 分析倒數 (假設 4 小時更新一次)
 with col_time2:
     ai_last_time_str = ai_db.get("last_update", "---")
     if ai_last_time_str != "---":
-        last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
-        next_dt = last_dt + timedelta(hours=4)
-        diff = next_dt - datetime.now()
-        ai_msg = f"🤖 AI 下次改版倒數: {max(0, diff.seconds // 3600)}時 {(diff.seconds // 60) % 60}分"
+        try:
+            last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
+            next_dt = last_dt + timedelta(hours=4)
+            diff_sec = int((next_dt - now_tw).total_seconds()) # 改用總秒數計算，最準
+            
+            if 0 < diff_sec <= 14400:
+                ai_msg = f"🤖 AI 下次改版倒數: {diff_sec // 3600}時 {(diff_sec // 60) % 60}分"
+            else:
+                ai_msg = "🤖 AI 診斷：新一輪報告正在發布中..."
+        except:
+            ai_msg = "📅 時間格式異常"
     else:
         ai_msg = "🤖 AI 更新時間：等待同步中"
     st.info(ai_msg)
