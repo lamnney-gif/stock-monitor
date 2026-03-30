@@ -124,42 +124,30 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
-
-@st.cache_data(ttl=14400)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+@st.cache_data(ttl=3600)
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, us10y):
+    # 增加美債判斷邏輯
+    yield_status = "【慘烈】利率屠刀高掛" if us10y > 4.5 else "【緩和】環境尚可"
     
     prompt = f"""
-    你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
+    你現在是華爾街最毒舌、最直接的對沖基金操盤手。
+    針對標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
+    技術面：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    當前 10Y 美債殖利率：{us10y}% ({yield_status})
     
-    【1. 即時政經與外部衝突】
-    調閱當前全球即時政經背景：包含地緣政治和衝突、美債殖利率波動、油價及公司和相關產業的影響。
-    分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
+    【指令】
+    1. 結合目前(2026年3月)地緣政治衝突(如供應鏈斷裂風險)與美債波動，直接點出這檔標的是在「找死」還是在「撿便宜」。
+    2. 禁止使用「可能」、「產生一定影響」、「建議謹慎」、「觀察」等官腔詞彙。
+    3. 如果數據很爛，就直接叫我撤退；如果數據很好，就叫我全倉。
     
-    【2. 數據與技術面參數】
-    現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
-    
-    【3. 操作核心建議】
-    結合政經變數，判斷目前是「溢價合理」還是「黑天鵝預警」。
-    給出具體的實戰部署（如：回測加碼、高檔利了結、現金為王）。
-    語氣專業冷靜，禁止使用官腔詞彙，直接告訴我因為受什麼影響 限制在 150 字內。
+    字數 100 字內，越狠越好。
     """
-    
-    if ai_engines["groq"]:
-        try:
-            completion = ai_engines["groq"].chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": "你是一位洞察資本市場量化指標與趨勢連動關係的資深策略家。"},
-                          {"role": "user", "content": prompt}]
-            )
-            return "🔥 策略室： " + completion.choices[0].message.content
-        except: pass
-        
     if ai_engines["gemini"]:
         try:
             res = ai_engines["gemini"].generate_content(prompt)
-            return "🔮 戰略部： " + res.text
-        except: return "⚠️ 分析師會議中 (API 忙碌)"
-    return "❌ 分析引擎未啟動"
+            return "💥 交易員指令： " + res.text
+        except: return "⚠️ 腦部斷線"
+    return "❌ 引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
