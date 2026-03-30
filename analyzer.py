@@ -26,7 +26,7 @@ def run_analysis():
     for ticker, info in raw_data.get("stocks", {}).items():
         print(f"🧠 正在分析: {info['name']}...")
         
-        prompt = f"你是投資長。標:{info['name']}, 價:{info['price']}, RSI:{info['rsi']}。100字內狠準狂分析。"
+        prompt = f"你是投資長。標:{info['name']}, 價:{info['price']}, RSI:{info['rsi']}。100字內狠準狂分析(請用繁體中文)。"
         
         try:
             # 這裡可以稍微延遲，確保不撞 RPM
