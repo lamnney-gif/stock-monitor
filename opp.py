@@ -16,47 +16,47 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列：AI 倒數 與 行情數據倒數 ---
+# --- 2. 狀態列：精準倒數邏輯 ---
 col_status1, col_status2 = st.columns(2)
 
 with col_status1:
-    # 網頁本身的 60 秒強制重整計時器
-    refresh_timer = st.empty() 
+    refresh_timer = st.empty() # 網頁 60 秒刷新
 
 with col_status2:
-    # --- A. AI 診斷倒數 (4小時) ---
     ai_time_str = ai_db.get("last_update", "---").strip()
-    # --- B. 行情數據倒數 (30分鐘) ---
     raw_time_str = raw_db.get("last_update", "---").strip()
 
-    # 建立一個容器來放這兩條資訊
-    status_container = st.container()
-    
-    with status_container:
-        # 處理 AI 倒數
-        if ai_time_str != "---":
-            try:
-                ai_last = datetime.strptime(ai_time_str, "%Y-%m-%d %H:%M:%S")
-                ai_next = ai_last + timedelta(hours=4)
-                ai_diff = int((ai_next - datetime.now()).total_seconds())
-                if ai_diff > 0:
-                    st.info(f"🤖 AI 下次改版：{ai_diff//3600}時 {(ai_diff%3600)//60}分後")
-                else:
-                    st.warning(f"⏳ AI 正在同步中... (上次: {ai_time_str})")
-            except: pass
+    # 💡 核心修正：使用相對時間差，無視絕對時區
+    def get_remaining_seconds(time_str, limit_minutes):
+        if time_str == "---": return None
+        try:
+            # 1. 解析存檔時間
+            last_dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+            # 2. 取得「當下」與「存檔」的絕對秒數差 (不論時區，只看間隔)
+            # 透過 timestamp() 轉換為自 1970 年以來的秒數，這在所有主機上都是對齊的
+            elapsed_seconds = int(time.time() - last_dt.timestamp())
+            # 3. 計算剩餘秒數
+            remaining = (limit_minutes * 60) - elapsed_seconds
+            return remaining
+        except:
+            return None
 
-        # 處理行情倒數
-        if raw_time_str != "---":
-            try:
-                raw_last = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
-                raw_next = raw_last + timedelta(minutes=15)
-                raw_diff = int((raw_next - datetime.now()).total_seconds())
-                if raw_diff > 0:
-                    # 用綠色 success 區隔，這代表即時股價
-                    st.success(f"📈 行情下次更新：{raw_diff//60} 分 {raw_diff%60} 秒後")
-                else:
-                    st.error(f"⚠️ 行情更新延遲 (上次: {raw_time_str})")
-            except: pass
+    # --- A. AI 診斷倒數 (4小時 = 240分鐘) ---
+    ai_rem = get_remaining_seconds(ai_time_str, 240)
+    if ai_rem is not None:
+        if ai_rem > 0:
+            st.info(f"🤖 AI 下次改版：{ai_rem//3600}時 {(ai_rem%3600)//60}分後")
+        else:
+            st.warning(f"⏳ AI 同步中... (上次更新: {ai_time_str})")
+
+    # --- B. 行情數據倒數 (15分鐘) ---
+    raw_rem = get_remaining_seconds(raw_time_str, 15)
+    if raw_rem is not None:
+        if raw_rem > 0:
+            st.success(f"📈 行情下次更新：{raw_rem//60} 分 {raw_rem%60} 秒後")
+        else:
+            # 如果超過 15 分鐘還沒更新，顯示 Error 提醒
+            st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
