@@ -16,45 +16,34 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# 強制校準台北現在時間 (UTC+8)
-now_tw = datetime.utcnow() + timedelta(hours=8)
-
 # --- 2. 狀態列與倒數計時 ---
+now_tw = datetime.utcnow() + timedelta(hours=8)
 col_time1, col_time2 = st.columns(2)
 
 with col_time1:
-    # 這裡顯示的是 JSON 裡的靜態時間，代表數據新鮮度
+    # 刪除了原本不動的 st.metric，只保留動態秒數
     refresh_timer = st.empty()
 
 with col_time2:
     ai_last_time_str = ai_db.get("last_update", "---")
     if ai_last_time_str != "---":
         try:
-            # 去除可能的前後空格，確保解析正確
-            clean_time = ai_last_time_str.strip()
-            # 支援多種格式解析，防止 Action 寫入格式稍微變動就報錯
-            try:
-                last_dt = datetime.strptime(clean_time, "%Y-%m-%d %H:%M:%S")
-            except:
-                # 備用格式 (萬一沒有秒數或格式不同)
-                last_dt = datetime.strptime(clean_time[:16], "%Y-%m-%d %H:%M")
-            
+            last_dt = datetime.strptime(ai_last_time_str.strip(), "%Y-%m-%d %H:%M:%S")
             next_dt = last_dt + timedelta(hours=4)
             diff_seconds = int((next_dt - now_tw).total_seconds())
             
+            # 如果倒數在 0~4 小時內，正常顯示
             if 0 < diff_seconds <= 14400:
                 hrs = diff_seconds // 3600
                 mins = (diff_seconds % 3600) // 60
-                ai_msg = f"🤖 AI 下次改版倒數: {hrs}時 {mins}分"
-                st.info(ai_msg)
+                st.info(f"🤖 AI 下次改版倒數: {hrs}時 {mins}分")
+            # 如果已經過期（diff <= 0），或者過期太久（例如剛開市）
             else:
-                # 如果時間超過 4 小時或已經過期，代表 Action 正在跑
-                st.warning("⏳ AI 診斷：新一輪報告正在發布中...")
-        except Exception as e:
-            # 報錯時顯示具體原因，方便抓蟲
-            st.error(f"⚠️ 時間解析失敗: {str(e)}")
+                st.warning("⏳ AI 智權診斷：正在接入新一輪數據...")
+        except:
+            st.error("⚠️ AI 時間格式異常")
     else:
-        st.info("🤖 AI 更新時間：等待同步中")
+        st.info("🤖 AI 診斷：等待首次同步中...")
 
 # --- 3. 免責聲明 ---
 st.markdown("""
