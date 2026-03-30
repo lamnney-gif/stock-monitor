@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
 
 env:
-  # 🟢 方案 A：直接告訴 GitHub 我們要用 Node 24 跑這些舊組件
+  # 🟢 第一重防線：消除 Node.js 警告
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   update:
@@ -15,35 +16,43 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 🟢 方案 B：直接升級組件版本到 v4 和 v5 (支援新版 Node)
-      - name: Checkout Repository
-        uses: actions/checkout@v4  # 從 v3 升級到 v4
-        
+      # 🟢 第二重防線：明確指定最新版本，並加入環境變數
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 抓取完整歷史，防止 rebase 失敗
+
       - name: Set up Python
-        uses: actions/setup-python@v5 # 從 v4 升級到 v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install dependencies
+      - name: Install deps
         run: pip install groq pandas
 
-      - name: Run AI Analyzer
+      - name: Run AI
         env:
           GROQ_API_KEY_1: ${{ secrets.GROQ_API_KEY_1 }}
           GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_1 }}
         run: python analyzer.py
 
-      - name: Force Push Results
+      - name: Force Push AI Results
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "AI-Bot"
-          # 採用暴力重試邏輯，確保 128 衝突不再發生
+          
+          # 🟢 第三重防線：暴力解決 Exit Code 128
+          # 先清理可能鎖死的索引，再拉取遠端，最後推送
+          git gc --prune=now
+          git remote update
+          
           for i in {1..5}; do
             git pull --rebase origin main
             git add analysis_results.json
             if git diff --staged --quiet; then
-              echo "No changes to commit"
+              echo "No changes"
               exit 0
             fi
-            git commit -m "🧠 AI Strategy Updated" && git push origin main && break || sleep 5
+            git commit -m "🧠 AI Update: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin main && break || (sleep 10 && git pull --rebase origin main)
           done
