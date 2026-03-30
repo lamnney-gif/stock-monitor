@@ -125,25 +125,32 @@ def get_volume_support(df):
 
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
 @st.cache_data(ttl=3600)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
-    # 這裡下達極其嚴厲的指令，要求 AI 講真話
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, us10y):
+    # 增加美債判斷邏輯
+    yield_status = "【慘烈】利率屠刀高掛" if us10y > 4.5 else "【緩和】環境尚可"
+    
     prompt = f"""
-    你現在是 Goldman Sachs 操盤室主管，說話極度直接，拒絕廢話與官腔。
+    你現在是華爾街最毒舌、最直接的對沖基金操盤手。
     針對標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
-    當前技術指標：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    技術面：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    當前 10Y 美債殖利率：{us10y}% ({yield_status})
     
-    【任務】
-    1. 針對目前(2026年3月)的全球大局（如：美債10Y殖利率高標、台海/地緣政治最新摩擦、AI算力是否泡沫化），直接給出該股的「死穴」或「機會」。
-    2. 分析資金現在是在「恐懼撤離」還是「貪婪接盤」。
-    3. 給出一個狠心的買賣建議。
+    【指令】
+    1. 結合目前(2026年3月)地緣政治衝突(如供應鏈斷裂風險)與美債波動，直接點出這檔標的是在「找死」還是在「撿便宜」。
+    2. 禁止使用「可能」、「產生一定影響」、「建議謹慎」、「觀察」等官腔詞彙。
+    3. 如果數據很爛，就直接叫我撤退；如果數據很好，就叫我全倉。
     
-    限制 120 字內，不准說「產生一定影響」這種廢話。
+    字數 100 字內，越狠越好。
     """
-    if ai_engines["gemini"]:
+    if ai_engines["groq"]:
         try:
-            res = ai_engines["gemini"].generate_content(prompt)
-            return "🎯 首席策略： " + res.text
-        except: return "⚠️ 系統繁忙"
+            completion = ai_engines["groq"].chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": "你是一位洞察地緣政治與資本市場連動關係的資深策略家。"},
+                          {"role": "user", "content": prompt}]
+            )
+            return "🔥 策略室： " + completion.choices[0].message.content
+        except: pass
     return "❌ 引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
