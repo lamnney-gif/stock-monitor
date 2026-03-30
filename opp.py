@@ -16,21 +16,20 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列與狀態顯示 (移除倒數邏輯) ---
+# --- 2. 狀態列 (純顯示，不計算時差) ---
 col_status1, col_status2 = st.columns(2)
 
 with col_status1:
-    # 保持原本的 60 秒網頁自動刷新倒數
-    refresh_timer = st.empty() 
+    refresh_timer = st.empty() # 60秒自動刷新
 
 with col_status2:
-    # 只要讀得到 AI 報告的內容，就顯示正常的綠色狀態
+    # 只要讀得到報告內容，就顯示綠色成功
     if ai_db.get("reports") and len(ai_db["reports"]) > 0:
-        # 顯示最後更新時間作為參考，但不參與倒數計算
         last_t = ai_db.get("last_update", "---")
-        st.success(f"✅ AI 診斷：已接入最新市場報告 (存檔點: {last_t})")
+        st.success(f"✅ AI 診斷：已接入最新報告 (存檔點: {last_t})")
     else:
-        st.info("🤖 AI 診斷：等待雲端數據同步中...")
+        # 如果檔案還沒推上來，顯示等待中
+        st.warning("⏳ AI 診斷：新一輪報告生成中 (GitHub 同步延遲)...")
 
 # --- 3. 免責聲明 ---
 st.markdown("""
