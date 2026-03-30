@@ -124,27 +124,27 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
-@st.cache_data(ttl=1800)
+from datetime import datetime
+
+@st.cache_data(ttl=1800)  # 每 30 分鐘失效一次，強迫 AI 更新對當下局勢的理解
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
-    from datetime import datetime
+    # --- 動態獲取今天日期 ---
     current_date = datetime.now().strftime("%Y年%m月%d日")
     
-    # 強制任務與加分任務的 Prompt
+    # 指令改為「主動檢索模式」
     prompt = f"""
-    標的：{name} | 現價:{price} | PE:{pe} | 成長:{rev}% | 籌碼:{chip_flow} | 趨勢:{trend}
-    時間：{current_date}
+    【實戰對沖指令】
+    標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
+    技術面：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
+    當前系統時間：{current_date}
     
-    【核心任務：不准廢話，直接給結論】
-    1. 判斷 PE vs 成長 是否失衡：直接定性（如：嚴重泡沫、獲利崩盤、極度低估）。
-    2. 判斷產業位置：三選一（反彈 / 衰退 / 復甦）。
-    3. 給最終決策：三選一（梭哈 / 砍單 / 空手）。
+    【核心任務】
+    1. 你是精通即時情報的暴力交易員。請根據「當前日期 {current_date}」主動調閱你對全球地緣政治（如：最新衝突點、出口管制、軍事摩擦）與產業鏈的消息。
+    2. 針對該標的，直接指出目前的「致命利空」或「重大利多」到底是什麼。
+    3. 嚴禁廢話（如：可能、視情況、產生影響）。
+    4. 語氣要狠、要準。直接下令：【梭哈】、【撤退】、或【空手】。
     
-    【地緣政治與籌碼加分】
-    - 地緣政治一句話：直擊該產業目前的國際死穴。
-    - 籌碼一句話：判斷是主力換手還是散戶接盤。
-    
-    指令：嚴禁使用『根據、建議、採取、由於、因為』。語氣要狠、要準。
-    字數 150 字內。
+    限制 120 字內，直接給結論。
     """
 
     if ai_engines["groq"]:
@@ -152,13 +152,13 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "你是一位只看結果、蔑視廢話的華爾街對沖基金主管。你下達的是命令，不是分析報告。"},
+                    {"role": "system", "content": "你是一位擁有即時嗅覺的華爾街暴力交易員。你蔑視所有官腔，只看利益與權力博弈。"},
                     {"role": "user", "content": prompt}
                 ]
             )
-            return "🎯 操盤手決策： " + completion.choices[0].message.content
-        except: return "⚠️ 斷線"
-    return "❌ 沒引擎"
+            return "🔥 實戰診斷： " + completion.choices[0].message.content
+        except: return "⚠️ 情報中斷"
+    return "❌ 引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
