@@ -42,7 +42,8 @@ CARD_TEMPLATE = """
             <div style="font-size:3.5em; font-weight:900; color:#b71c1c; margin:5px 0;">${PRICE}</div>
             <div style="font-size:0.9em; color:#555;">趨勢：💀 空頭排列 | <b>PE(本益比): {PE}</b> | <b>營收成長: {GROWTH}</b></div>
         </div>
-        <div style="background:#fbe9e7; padding:12px; border-radius:8px; width:160px; font-size:0.85em; color:#d32f2f; border:1px solid #ffccbc;">RSI: 53.4 | 籌碼: ☁️ 盤整 | 量比: 1.8x</div>
+        <div style="background:#fbe9e7; padding:12px; border-radius:8px; width:160px; font-size:0.85em; color:#d32f2f; border:1px solid #ffccbc;">
+             RSI: {RSI} | 籌碼: {CHIPS} | 量比: {VOL_RATIO}
     </div>
     <hr style="border:0.5px solid #ffcdd2; margin:15px 0;">
     <div style="background:white; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:15px;">
