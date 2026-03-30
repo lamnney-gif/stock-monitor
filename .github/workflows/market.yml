@@ -1,7 +1,7 @@
 name: 60s Market Monitor
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'  # UTC，每 15 分鐘跑一次
   workflow_dispatch:
 jobs:
   update:
@@ -18,9 +18,10 @@ jobs:
         run: pip install yfinance pandas
       - name: Run Fetcher
         run: python fetcher.py
+      - name: Show last update
+        run: |
+          python -c "import json; data=json.load(open('data_raw.json')); print('上次更新時間:', data.get('last_update'))"
       - name: Push
-        env:
-          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "MarketBot"
