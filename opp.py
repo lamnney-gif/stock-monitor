@@ -326,16 +326,19 @@ for d in data_list:
             <div style="flex: 1; background: rgba(255,255,255,0.6); padding: 15px; border-radius: 12px; border: 1px solid #d9d9d9;">
                 <b>🧪 邏輯回測參數：</b><br>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div><span class="price-label">🟢 觀察買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
-                    <div><span class="price-label">🎯 壓力位</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
+                <div><span class="price-label">🟢 建議買點</span><br><span class="price-value" style="color:#389e0d;">{d['buy']}</span></div>
+                    <div><span class="price-label">🎯 技術壓力</span><br><span class="price-value" style="color:#cf1322;">{d['sell']}</span></div>
     
                     <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
     
-                    <div><span class="price-label">🚫 {d['limit_label']}</span><br><span class="price-value" style="color:#722ed1;">{d['upper_limit']}</span></div>
-                    <div><span class="price-label">📉 支撐分佈</span><br><span class="price-value">{d['sup']}</span></div>
-    
-                    <div style="grid-column: span 2; height: 1px; background: #ddd; margin: 2px 0;"></div>
-                    <div style="grid-column: span 2;"><span class="price-label">📈 統計壓力上限</span><br><span class="price-value">{d['pre']}</span></div>
+                    <div>
+                        <span class="price-label">🚫 {d['limit_label']}</span><br>
+                        <span class="price-value" style="color:#722ed1;">{d['upper_limit']}</span>
+                    </div>
+                    <div>
+                        <span class="price-label">📉 支撐分佈</span><br>
+                        <span class="price-value">{d['sup']}</span>
+
                 </div>
             </div>
         </div>
