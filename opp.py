@@ -7,37 +7,43 @@ from string import Template
 
 st.set_page_config(page_title="半導體大戶戰情室", layout="wide")
 
+# --- 1. 數據載入 ---
 def load_data():
-    r = json.load(open("data_raw.json", "r", encoding="utf-8")) if os.path.exists("data_raw.json") else {"stocks": {}}
-    a = json.load(open("analysis_results.json", "r", encoding="utf-8")) if os.path.exists("analysis_results.json") else {"reports": {}, "last_update": "---"}
+    raw_p, ai_p = "data_raw.json", "analysis_results.json"
+    r = json.load(open(raw_p, "r", encoding="utf-8")) if os.path.exists(raw_p) else {"stocks": {}}
+    a = json.load(open(ai_p, "r", encoding="utf-8")) if os.path.exists(ai_p) else {"reports": {}, "last_update": "---"}
     return r, a
 
 raw_db, ai_db = load_data()
-# 取得目前台北時間
-now_tw = datetime.utcnow() + timedelta(hours=8)
 
-# --- 頂部狀態列 ---
-c1, c2 = st.columns(2)
-with c1:
-    refresh_p = st.empty()
+# --- 2. 倒數計時器區塊 ---
+col_time1, col_time2 = st.columns(2)
 
-with c2:
-    last_up = ai_db.get("last_update", "---")
-    if last_up != "---":
-        # 解析 JSON 裡面的台北時間
-        last_dt = datetime.strptime(last_up, "%Y-%m-%d %H:%M:%S")
+# 網頁刷新倒數 (60秒)
+with col_time1:
+    refresh_timer = st.empty()
+
+# AI 分析倒數 (假設 4 小時更新一次)
+with col_time2:
+    ai_last_time_str = ai_db.get("last_update", "---")
+    if ai_last_time_str != "---":
+        last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
         next_dt = last_dt + timedelta(hours=4)
-        diff = next_dt - now_tw
-        sec_left = int(diff.total_seconds())
-        
-        if sec_left <= 0:
-            st.warning("⏳ AI 診斷：新一輪報告正在發布...")
-        else:
-            st.info(f"⏳ AI 下次大改版倒數：{sec_left//3600}時 {(sec_left%3600)//60}分")
+        diff = next_dt - datetime.now()
+        ai_msg = f"🤖 AI 下次改版倒數: {max(0, diff.seconds // 3600)}時 {(diff.seconds // 60) % 60}分"
     else:
-        st.error("🤖 等待 AI 初次同步數據...")
+        ai_msg = "🤖 AI 更新時間：等待同步中"
+    st.info(ai_msg)
 
-# 授權
+# --- 3. 免責聲明 ---
+st.markdown("""
+<div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
+    <h3 style="color:#ef6c00; margin:0; font-size:1.2em;">⚠️ 系統使用免責聲明</h3>
+    <p style="color:#5d4037; font-size:0.85em; margin:5px 0 0 0;">本平台數據僅供研究參考，投資者應自行評估風險並自負損益。</p>
+</div>
+""", unsafe_allow_html=True)
+
+# 授權檢查
 if "auth" not in st.session_state: st.session_state["auth"] = False
 if not st.session_state["auth"]:
     if st.text_input("授權碼", type="password") == "8888":
@@ -45,50 +51,65 @@ if not st.session_state["auth"]:
         st.rerun()
     st.stop()
 
-# --- HTML 模板 (補回風控與換手區) ---
-CARD = Template("""
-<div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; margin-bottom: 25px;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+# --- 4. HTML 模板 (含風控與密集換手區) ---
+CARD_STYLE = Template("""
+<div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: sans-serif; margin-bottom: 30px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
         <div>
-            <h2 style="color:#b71c1c; margin:0;">☢️ $NAME ($TICKER)</h2>
+            <h2 style="color:#b71c1c; margin:0; font-size:1.8em;">☢️ $NAME ($TICKER)</h2>
             <div style="font-size:3.5em; font-weight:900; color:#b71c1c; margin:5px 0;">$$$PRICE</div>
-            <div style="font-size:0.9em; color:#555;">PE: $PE | 成長: $GROWTH</div>
+            <div style="font-size:0.9em; color:#555;">趨勢：💀 空頭排列 | <b>PE: $PE</b> | <b>成長: $GROWTH</b></div>
         </div>
-        <div style="background:#fbe9e7; padding:10px; border-radius:8px; color:#d32f2f;">
+        <div style="background:#fbe9e7; padding:12px; border-radius:8px; width:160px; font-size:0.85em; color:#d32f2f; border:1px solid #ffccbc;">
             RSI: $RSI | 籌碼: $CHIPS | 量比: $VOL_RATIO
         </div>
     </div>
-    <div style="background:white; border-radius:10px; padding:15px; margin:15px 0; border:1px solid #eee;">
-        <div style="display:grid; grid-template-columns: repeat(4, 1fr); text-align:center;">
-            <div><small>🟢 買點</small><br><b>$BUY_POINT</b></div>
-            <div><small>🎯 壓力</small><br><b>$PRESSURE</b></div>
-            <div><small>📉 支撐</small><br><b>$SUPPORT</b></div>
-            <div><small>📈 密集</small><br><b>$TURNOVER</b></div>
+    <hr style="border:0.5px solid #ffcdd2; margin:15px 0;">
+    <div style="background:white; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:15px;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:15px; text-align:center;">
+            <div><span style="color:#2e7d32; font-size:0.8em; font-weight:bold;">🟢 觀察買點</span><br><b style="color:#2e7d32; font-size:1.4em;">$BUY_POINT</b></div>
+            <div><span style="color:#c62828; font-size:0.8em; font-weight:bold;">🎯 壓力位</span><br><b style="color:#c62828; font-size:1.4em;">$PRESSURE</b></div>
+            <div><span style="color:#c62828; font-size:0.8em; font-weight:bold;">📉 支撐分佈</span><br><b style="color:#c62828; font-size:1.4em;">$SUPPORT</b></div>
+            <div><span style="color:#c62828; font-size:0.85em; font-weight:bold;">📈 壓力分佈</span><br><b style="color:#c62828; font-size:1.4em;">$PRESSURE</b></div>
         </div>
-        <div style="margin-top:10px; font-size:0.8em; color:#666; border-top:1px solid #f0f0f0; padding-top:10px;">
-            ⚙️ 風控防守: $SUPPORT | ATR: $ATR | 📊 密集換手: $TURNOVER
+        <div style="margin-top:15px; padding-top:10px; border-top:1px solid #f0f0f0; display:flex; flex-wrap:wrap; gap:15px;">
+            <div style="flex:1; min-width:200px;">
+                <b style="color:#333; font-size:0.9em;">⚙️ 風控與成本模擬：</b><br>
+                <span style="color:#1565c0; font-size:0.85em;">防守觀察點: $SUPPORT</span> | <span style="color:#c62828; font-size:0.85em;">ATR地板: $ATR</span>
+            </div>
+            <div style="flex:1; min-width:150px;"><b style="color:#333; font-size:0.9em;">📊 市場分佈：</b><br><span style="color:#555; font-size:0.85em;">密集換手區: $TURNOVER</span></div>
         </div>
     </div>
-    <div style="background:rgba(255,255,255,0.7); padding:10px; border-radius:8px;">
-        <b style="color:#333;">🧠 AI 診斷：</b><br><span style="font-size:0.95em; color:#444;">$REPORT</span>
+    <div style="background:rgba(255,255,255,0.8); padding:15px; border-radius:10px;">
+        <b style="font-size:1.1em; color:#333;">🧠 智權診斷 (AI 版)：</b>
+        <div style="margin-top:10px; font-size:1em; line-height:1.6; color:#444;">$REPORT</div>
     </div>
 </div>
 """)
 
-# --- 渲染 ---
-for tk, d in raw_db.get("stocks", {}).items():
-    rep = ai_db.get("reports", {}).get(tk, "同步中...").replace("\n", "<br>")
-    st.markdown(CARD.safe_substitute(
-        NAME=d.get('name', tk), TICKER=tk, PRICE=d.get('price'),
-        PE=d.get('pe'), GROWTH=d.get('growth'), RSI=d.get('rsi'),
-        CHIPS=d.get('chips'), VOL_RATIO=d.get('volume_ratio'),
-        BUY_POINT=d.get('buy_point'), PRESSURE=d.get('pressure'),
-        SUPPORT=d.get('support'), ATR=d.get('atr'),
-        TURNOVER=d.get('turnover_zone'), REPORT=rep
-    ), unsafe_allow_html=True)
+# --- 5. 數據渲染 ---
+ticker_list = ["2330.TW", "NVDA", "MU", "000660.KS", "2303.TW", "6770.TW", "2344.TW", "3481.TW", "1303.TW"]
+names = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 
-# --- 倒數刷新 ---
+for tk in ticker_list:
+    d = raw_db.get("stocks", {}).get(tk, {})
+    report_content = ai_db.get("reports", {}).get(tk, "🤖 分析同步中...")
+    report_clean = str(report_content).replace("\n", "<br>").replace("'", "&apos;")
+
+    html_output = CARD_STYLE.safe_substitute(
+        NAME=names.get(tk, tk), TICKER=tk,
+        PRICE=str(d.get('price', '---')), PE=str(d.get('pe', '---')),
+        GROWTH=str(d.get('growth', '---')), RSI=str(d.get('rsi', '---')),
+        CHIPS=str(d.get('chips', '---')), VOL_RATIO=str(d.get('volume_ratio', '---')),
+        BUY_POINT=str(d.get('buy_point', '---')), SUPPORT=str(d.get('support', '---')),
+        PRESSURE=str(d.get('pressure', '---')), ATR=str(d.get('atr', '---')),
+        TURNOVER=str(d.get('turnover_zone', '---')), REPORT=report_clean
+    )
+    st.markdown(html_output, unsafe_allow_html=True)
+
+# --- 6. 動態倒數計時邏輯 ---
 for i in range(60, 0, -1):
-    refresh_p.metric("🔄 行情即時刷新", f"{i}s")
+    refresh_timer.metric("🔄 頁面即時行情刷新倒數", f"{i} 秒")
     time.sleep(1)
+
 st.rerun()
