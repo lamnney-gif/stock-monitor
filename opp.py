@@ -113,17 +113,35 @@ def get_volume_support(df):
 # --- 5. AI 權重診斷 (高盛魂 + Groq) ---
 @st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
-    if not ai_engines["groq"]: return "❌ Groq 引擎離線"
-    fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。"
-    prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 一句話結論(50字內)。"
+    if not ai_engines["groq"]: return "❌ 智庫連線失敗"
+    
+    # 這裡就是靈魂：設定一個極端專業且帶有攻擊性的 Prompt
+    prompt = f"""
+    [身份：全球頂級對沖基金投資長]
+    [任務：針對{name}下達終極指令]
+    當前報價：{price}
+    核心數據：PE {pe}, 營收成長 {rev}, RSI {rsi:.1f}, 乖離率 {bias}%, 籌碼面 {chip_flow}, 趨勢 {trend}, 斜率 {slope}%
+    
+    指令要求：
+    1. 絕對禁止廢話，禁止重複我給你的數據。
+    2. 語氣要狠、準、狂。你要像是一個正在盯著 10 億美金部位的操盤手。
+    3. 判斷這價位是在「誘多」還是「黃金坑」。
+    4. 必須包含一個對「地緣政治」或「半導體週期」的辛辣觀察。
+    5. 限 60 字內，一針見血。
+    """
+    
     try:
-        time.sleep(1.0) # 緩解 API 併發壓力
+        time.sleep(1.0) # 防 API 封鎖
         res = ai_engines["groq"].chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": "你是一位蔑視傳統分析、只看獵物和陷阱的傳奇投資長。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8
         )
-        return "🦅 首席策略： " + res.choices[0].message.content.strip()[:90]
-    except: return f"📊 數據診斷：{fallback}"
+        return "🦅 投資長令： " + res.choices[0].message.content.strip()
+    except: return f"📊 數據診斷：籌碼趨於極端，守住支撐區。"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
