@@ -123,6 +123,14 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
+def get_google_news(keyword):
+    news = []
+    try:
+        feed = feedparser.parse(f"https://news.google.com/rss/search?q={quote(keyword + ' 股價')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant")
+        for entry in feed.entries[:3]: news.append(f"• [{entry.title}]({entry.link})")
+    except: pass
+    return news
+
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 
 @st.cache_data(ttl=14400)
@@ -204,6 +212,10 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
+            # A. 優先獲取即時新聞 (為 AI 診斷提供上下文)
+            current_news = get_google_news(info['name'])
+            news_dict[info['name']] = current_news
+
             # B. 抓取行情數據
             stock = yf.Ticker(ticker)
             s_info = stock.info
@@ -307,3 +319,4 @@ for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後自動刷新數據 (AI 診斷每4小時更新)")
     time.sleep(1)
 st.rerun()
+
