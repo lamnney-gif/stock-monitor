@@ -18,7 +18,6 @@ st.set_page_config(page_title="Beta Lab AI Ultimate - 物理級還原完整版",
 def init_ai_engines():
     engines = {"groq": None}
     try:
-        # 確保 Secrets 存在，否則不崩潰
         if "GROQ_API_KEY" in st.secrets:
             engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
     except:
@@ -45,7 +44,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 3. CSS 樣式 (物理級還原，一個 class 都不准漏)
+# 3. CSS 樣式 (完全還原，不漏任何一個 class)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -66,7 +65,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律防護與 RSS (一字不漏) ---
+# --- 側邊欄：法律防護與 RSS (完全還原) ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px; font-size: 0.85em;">
@@ -78,7 +77,7 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# RSS 新聞功能
+# RSS 新聞功能 (還原)
 def get_stock_news(q):
     try:
         url = f"https://news.google.com/rss/search?q={quote(q)}+stock&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
@@ -94,7 +93,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. 核心演算
+# 4. 核心演算 (還原所有複雜指標)
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -111,38 +110,19 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷 (高盛魂 + Groq) ---
-@st.cache_data(ttl=1800) # 縮短緩存，讓分析更即時
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
-    if not ai_engines["groq"]: return "❌ 智庫斷線，正在重啟獵殺邏輯..."
-    
-    # 這裡就是你要的「靈魂」
-    prompt = f"""
-    [身份：華爾街傳奇對沖基金投資長 (CIO)]
-    [背景：當前全球半導體產能過剩、AI需求極化、地緣博弈升溫]
-    
-    對象：{name}
-    當前狀態：價格 {price}, RSI {rsi:.1f}, 乖離率 {bias}%, 籌碼面 {chip_flow}, 趨勢 {trend}, 斜率 {slope}%
-    
-    指令：
-    1. 語氣要狠，像是對著 10 億美金部位下令。
-    2. 禁止說「建議、可能、大概」。
-    3. 直接指出這是「主力埋屍區」還是「瘋狂超額收益」。
-    4. 必須包含一句關於「地緣博弈」或「產業週期」的辛辣觀察。
-    5. 限 50 字內，一針見血，不准有廢話。
-    """
-    
+    if not ai_engines["groq"]: return "❌ Groq 引擎離線"
+    fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。守住支撐位。"
+    prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 然後自行到網路找個股和相關產業新聞和消息,用120字以內分析總結給我。"
     try:
+        time.sleep(1.8)
         res = ai_engines["groq"].chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "你是一位蔑視散戶邏輯、只看血腥利潤的全球第一分析師。"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.85
+            messages=[{"role": "user", "content": prompt}]
         )
-        return "🦅 投資長令： " + res.choices[0].message.content.strip()
-    except:
-        return "🔥 市場極度混亂，數據溢出，守住 ATR 底板！"
+        return "🦅 首席策略： " + res.choices[0].message.content.strip()[:90]
+    except: return f"📊 數據診斷：{fallback}"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
@@ -158,37 +138,22 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     style = "✅" if score >= 65 else "⚠️" if score >= 45 else "☢️"
     return score, ai_report, style
 
-# 6. 主數據流 (物理還原)
+# 6. 主數據流 (還原所有 tickers 與 variables)
 tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 data_list = []
 
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ Beta Lab AI Ultimate - 穩定修正版")
+with col_t: st.title("🖥️ Beta Lab AI Ultimate - 數據全量對齊")
 with col_r: timer_placeholder = st.empty()
 
-# --- 核心抓取邏輯 (增加防崩潰) ---
-with st.spinner('同步全球數據中...'):
-    # VIX 防爆
-    try:
-        v_df = yf.Ticker("^VIX").history(period="5d")
-        vix = round(v_df['Close'].iloc[-1], 2) if not v_df.empty else 20.0
-    except: vix = 20.0
-
-    # SOX 防爆
-    try:
-        s_df = yf.Ticker("^SOX").history(period="1mo")
-        sox_status = "📈 BULL" if (not s_df.empty and s_df['Close'].iloc[-1] > s_df['Close'].mean()) else "📉 BEAR"
-    except: sox_status = "📉 BEAR"
-
-    # 10Y Yield 防爆
-    try:
-        u_df = yf.Ticker("^TNX").history(period="1d")
-        us10y = u_df['Close'].iloc[-1] if not u_df.empty else 4.0
-    except: us10y = 4.0
+with st.spinner('同步全球數據與 AI 模擬中...'):
+    vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
+    sox_df = yf.Ticker("^SOX").history(period="1mo")
+    sox_status = "📈 BULL" if sox_df['Close'].iloc[-1] > sox_df['Close'].mean() else "📉 BEAR"
+    us10y = yf.Ticker("^TNX").history(period="1d")['Close'].iloc[-1]
 
     for ticker, name in tickers.items():
         try:
-            time.sleep(1.0) # 強制延遲，防止 Yahoo 封鎖 IP
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
@@ -199,6 +164,7 @@ with st.spinner('同步全球數據中...'):
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / (df['Volume'].iloc[-6:-1].mean() + 1e-9)
             
+            # --- 數據變數 (物理還原，絕不漏掉) ---
             pe_val = f"{s_info.get('trailingPE', 0):.1f}"
             rev_growth = f"{(s_info.get('revenueGrowth', 0) or 0) * 100:.1f}%"
             inst_hold = f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%"
@@ -215,6 +181,7 @@ with st.spinner('同步全球數據中...'):
             bias = round(((close_val - ma20) / ma20) * 100, 2)
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
+            # 支撐位與防守
             chip_floor = get_volume_support(df)
             stop_line = df['High'].tail(5).max() * 0.97
             dynamic_stop = close_val - (2.5 * atr_val)
@@ -234,7 +201,7 @@ with st.spinner('同步全球數據中...'):
             })
         except: continue
 
-# --- 7. UI 渲染 (一字不刪) ---
+# --- 7. UI 渲染 (完全還原 HTML 結構) ---
 st.sidebar.markdown(f"📊 **全球指標**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
 
 for d in data_list:
@@ -269,6 +236,7 @@ for d in data_list:
     </div>
     """, unsafe_allow_html=True)
 
+# 8. 自動刷新計時
 for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後刷新")
     time.sleep(1)
