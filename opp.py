@@ -132,15 +132,15 @@ def get_google_news(keyword):
     return news
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
-
 @st.cache_data(ttl=14400)
-def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
+def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, news_list):
+    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
     
     prompt = f"""
     你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
     
     【1. 即時政經與外部衝突】
-    市場現狀：
+    市場現狀：{news_context}
     請自行識別當前的核心驅動力(如地緣政治開戰、油價飆升、AI需求轉折)。
     分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
 
