@@ -21,8 +21,8 @@ raw_db, ai_db = load_data()
 col_refresh, col_status2 = st.columns(2)
 
 with col_refresh:
-    # 這裡用來放「60秒網頁強制刷新」的數字
-    refresh_holder = st.empty()
+    # 💡 這裡定義名稱為 refresh_timer，對應程式最下方的迴圈
+    refresh_timer = st.empty()
    
 with col_status2:
     # 確保你有從 datetime 匯入 timezone
