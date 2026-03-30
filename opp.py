@@ -16,27 +16,36 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 倒數計時器區塊 (校準台北時間版) ---
+# --- 2. 狀態列與倒數計時 ---
 col_time1, col_time2 = st.columns(2)
-now_tw = datetime.utcnow() + timedelta(hours=8) # 強制台北現在時間
 
 with col_time1:
+    # 顯示行情最後更新時間 (從 data_raw.json 讀取)
+    m_up = raw_db.get("last_update", "---")
+    st.metric("💹 行情同步 (台北)", m_up)
     refresh_timer = st.empty()
 
 with col_time2:
     ai_last_time_str = ai_db.get("last_update", "---")
     if ai_last_time_str != "---":
         try:
+            # 解析 JSON 裡的台北時間
             last_dt = datetime.strptime(ai_last_time_str, "%Y-%m-%d %H:%M:%S")
+            # 設定目標：4 小時後
             next_dt = last_dt + timedelta(hours=4)
-            diff_sec = int((next_dt - now_tw).total_seconds()) # 改用總秒數計算，最準
+            # 計算精準秒數差
+            diff_seconds = int((next_dt - now_tw).total_seconds())
             
-            if 0 < diff_sec <= 14400:
-                ai_msg = f"🤖 AI 下次改版倒數: {diff_sec // 3600}時 {(diff_sec // 60) % 60}分"
+            if diff_seconds > 0 and diff_seconds <= 14400:
+                # 正常倒數
+                hrs = diff_seconds // 3600
+                mins = (diff_seconds % 3600) // 60
+                ai_msg = f"🤖 AI 下次改版倒數: {hrs}時 {mins}分"
             else:
-                ai_msg = "🤖 AI 診斷：新一輪報告正在發布中..."
+                # 如果時間到了或數據異常
+                ai_msg = "⏳ AI 診斷：新一輪報告正在發布中..."
         except:
-            ai_msg = "📅 時間格式異常"
+            ai_msg = "⚠️ 時間格式解析異常"
     else:
         ai_msg = "🤖 AI 更新時間：等待同步中"
     st.info(ai_msg)
