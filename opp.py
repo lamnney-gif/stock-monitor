@@ -2,41 +2,24 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import feedparser
 from datetime import datetime
-from urllib.parse import quote
 from sklearn.linear_model import LinearRegression
 import google.generativeai as genai
 import time
 from groq import Groq
 
-# --- [防封鎖核心] 建立偽裝 Session ---
-@st.cache_resource
-def get_safe_session():
-    session = requests.Session()
-    # 偽裝成一般的 Chrome 瀏覽器，避開 Yahoo 的偵測
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    })
-    return session
-
-safe_session = get_safe_session()
-
 # 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
 
-# --- 2. AI 核心啟動 (必須放在最前面) ---
+# --- 2. AI 核心啟動 ---
 @st.cache_resource
 def init_ai_engines():
     engines = {"gemini": None, "groq": None}
-    # 初始化 Groq
     try:
         if "GROQ_API_KEY" in st.secrets:
             engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
     except:
         pass
-    # 初始化 Gemini
     try:
         if "GEMINI_API_KEY" in st.secrets:
             genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
@@ -45,32 +28,25 @@ def init_ai_engines():
         pass
     return engines
 
-# 呼叫初始化
 ai_engines = init_ai_engines()
 
-# 2. 修改後的私密存取驗證 (加入防呆，防止掛機報錯)
+# 2. 修改後的私密存取驗證
 def check_password():
-    # 如果已經驗證成功了，直接過
     if st.session_state.get("password_correct", False):
         return True
 
-    # 顯示登入介面
     st.markdown("### 🖥️ 內部開發監測系統 V6.8")
-    
-    # 使用 .get() 來安全讀取，避免 KeyError
     pwd = st.text_input("請輸入存取密碼：", type="password", key="password_input")
     
-    if pwd: # 如果使用者有輸入東西
+    if pwd:
         if pwd == "8888":
             st.session_state["password_correct"] = True
-            st.rerun() # 驗證成功立即重整
+            st.rerun()
         else:
             st.error("😕 驗證失敗")
             return False
-            
     return False
 
-# 呼叫檢查
 if not check_password():
     st.stop()
 
@@ -109,7 +85,7 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 主頁面置頂警告 (確保手機版能看到) ---
+# --- 主頁面置頂警告 ---
 st.markdown("""
 <div class="mobile-warning">
     <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境 (Beta Lab)</b><br>
@@ -136,43 +112,41 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
-from datetime import datetime
+# --- 5. AI 權重診斷腦 (移除新聞參數) ---
 
-@st.cache_data(ttl=1800)  # 每 30 分鐘失效一次，強迫 AI 更新對當下局勢的理解
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
-    # --- 動態獲取今天日期 ---
-    current_date = datetime.now().strftime("%Y年%m月%d日")
-    
-    # 指令改為「主動檢索模式」
     prompt = f"""
-    你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『產業鏈穿透診斷』。
+    你現在是(Goldman Sachs)全球策略首席分析師。請針對 {name} 進行『量化與產業價值診斷』。
     
-    【1. 即時政經與外部衝突】
-    請自行識別當前的核心驅動力(如地緣政治開戰、油價飆升、AI需求轉折)。
-    分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
-
-    【2. 個股估值與技術面】
-    現價:{price} | PE:{pe} | 成長:{rev} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
+    【1. 技術與籌碼現況】
+    現價:{price} | RSI:{rsi:.1f} | 籌碼:{chip_flow} | 趨勢:{trend}
+    
+    【2. 估值與成長性】
+    PE:{pe} | 營收成長率:{rev}
     
     【3. 操作核心建議】
-    結合政經變數，判斷目前是「溢價合理」還是「黑天鵝預警」。
-    給出具體的實戰部署（如：回測加碼、高檔利了結、現金為王）。
+    請基於以上量化數據與該公司的產業地位，判斷目前是「價值重估」還是「風險溢價」。
+    給出具體的實戰部署建議（如：分批加碼、滿足點減碼、或觀望）。
     語氣專業冷靜，限制在 130 字內。
     """
-
+    
     if ai_engines["groq"]:
         try:
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "你是一位擁有即時嗅覺的華爾街暴力交易員。你蔑視所有官腔，只看利益與權力博弈。"},
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "system", "content": "你是一位專精於資本市場量化分析與全球產業鏈配置的資深策略家。"},
+                          {"role": "user", "content": prompt}]
             )
-            return "🔥 實戰診斷： " + completion.choices[0].message.content
-        except: return "⚠️ 情報中斷"
-    return "❌ 引擎未啟動"
+            return "🔥 策略室： " + completion.choices[0].message.content
+        except: pass
+        
+    if ai_engines["gemini"]:
+        try:
+            res = ai_engines["gemini"].generate_content(prompt)
+            return "🔮 戰略部： " + res.text
+        except: return "⚠️ 分析師會議中 (API 忙碌)"
+    return "❌ 分析引擎未啟動"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
@@ -185,7 +159,6 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     if d['chip_flow'] == "🔥 強勢買入": score += 15
     if d['rsi'] > 75: score -= 20
 
-    # 僅傳入數據進行分析
     ai_report = get_ai_analysis(name, d['price'], d['rsi'], d['chip_flow'], d['trend'], d['pe'], d['rev'])
     
     if score >= 85: return score, f"✅ 【強力進攻】{ai_report}", "✅"
@@ -215,7 +188,6 @@ with st.spinner('同步數據與 AI 運算中...'):
 
     for ticker, info in tickers.items():
         try:
-            # B. 抓取行情數據
             stock = yf.Ticker(ticker)
             s_info = stock.info
             df = stock.history(period="1y")
@@ -226,11 +198,9 @@ with st.spinner('同步數據與 AI 運算中...'):
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
-            # C. 基本面
             pe_val = s_info.get('trailingPE', 0)
             rev_growth = (s_info.get('revenueGrowth', 0) or 0) * 100
             
-            # D. 技術指標
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
@@ -243,23 +213,19 @@ with st.spinner('同步數據與 AI 運算中...'):
             bias = ((close_val - ma20) / ma20) * 100
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # E. 風控與支撐
             chip_floor = get_volume_support(df)
             stop_profit_line = df['High'].tail(5).max() * 0.97
             tech_sup, tech_pre = ma20 - 2 * std20, ma20 + 2 * std20
             suggested_buy = ma20 - 1.2 * std20
             dynamic_stop = close_val - (2.5 * atr_val)
 
-            # F. AI 綜合診斷
             pe_str = f"{pe_val:.1f}" if pe_val else "N/A"
             rev_str = f"{rev_growth:.1f}%"
             ai_score, ai_diag, ai_style = calculate_ai_confidence(
                 {'trend': trend_label, 'chip_flow': chip_flow, 'price': close_val, 'rsi': rsi_val, 'pe': pe_str, 'rev': rev_str},
                 vix, sox_status, "UP" if close_val > df_w['Close'].mean() else "DOWN", info['name']
             )
-# --- [關鍵] 加入 1.5 秒緩衝，防止 Groq 斷線 ---
-            time.sleep(1.5)
-        
+
             data_list.append({
                 "style": ai_style, "icon": ai_style, "name": f"{info['name']} ({ticker})", "price": round(close_val, 2),
                 "ai_diag": ai_diag, "buy": round(suggested_buy, 2), "sell": round(tech_pre, 2), "pe": pe_str, "rev": rev_str,
@@ -269,8 +235,6 @@ with st.spinner('同步數據與 AI 運算中...'):
                 "inst": f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%",
                 "chip_flow": chip_flow, "trend": trend_label
             })
-            # 增加微小延遲保護 IP
-            time.sleep(0.5)
         except Exception as e:
             st.warning(f"跳過 {ticker}: {e}")
 
