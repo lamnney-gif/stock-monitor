@@ -226,7 +226,24 @@ with st.spinner('同步數據與 AI 運算中...'):
             df_w = stock.history(period="2y", interval="1wk")
             if df.empty: continue
             
+           # --- 原有行情數據 ---
             close_val = df['Close'].iloc[-1]
+            
+            # --- [新增] 計算上限 (Upper Limit) 邏輯 ---
+            # 取得前一天的收盤價來算漲跌停
+            prev_close = df['Close'].iloc[-2] if len(df) > 1 else close_val
+            
+            if ".TW" in ticker:
+                # 台股邏輯：上限為前一日收盤價 +10% (漲停價)
+                upper_limit = prev_close * 1.10 
+                limit_label = "今日漲停價"
+            else:
+                # 美股邏輯：取過去 20 日最高點作為波段壓力上限
+                upper_limit = df['High'].tail(20).max() 
+                limit_label = "波段壓力區"
+            # ---------------------------------------
+
+            # --- 原有技術指標 ---
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / df['Volume'].iloc[-6:-1].mean()
             
