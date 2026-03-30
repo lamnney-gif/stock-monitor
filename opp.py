@@ -10,29 +10,33 @@ import google.generativeai as genai
 import time
 from groq import Groq
 
-# 1. 頁面配置 (1600px 寬版)
-st.set_page_config(page_title="Beta Lab AI Ultimate - 數據全量版", layout="wide")
+# 1. 頁面與 Session 配置 (防封鎖核心)
+st.set_page_config(page_title="Beta Lab AI Ultimate - 抗封鎖穩定版", layout="wide")
 
+def get_headers_session():
+    s = requests.Session()
+    s.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    })
+    return s
+
+custom_session = get_headers_session()
 # --- 2. AI 核心啟動 (必須放在最前面) ---
 @st.cache_resource
 def init_ai_engines():
     engines = {"gemini": None, "groq": None}
-    # 初始化 Groq
     try:
         if "GROQ_API_KEY" in st.secrets:
             engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
-    except:
-        pass
-    # 初始化 Gemini
+    except: pass
     try:
         if "GEMINI_API_KEY" in st.secrets:
             genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
             engines["gemini"] = genai.GenerativeModel('gemini-2.0-flash')
-    except:
-        pass
+    except: pass
     return engines
 
-# 呼叫初始化
 ai_engines = init_ai_engines()
 
 # 2. 修改後的私密存取驗證 (加入防呆，防止掛機報錯)
@@ -133,37 +137,23 @@ def get_google_news(keyword):
 
 # --- 5. AI 權重診斷腦 (高強度快取保護版) ---
 @st.cache_data(ttl=14400, show_spinner=False)
-def get_ai_analysis_safe(name, price, rsi, chip_flow, trend, pe, rev, news_list):
-    """
-    這個函數只在成功時回傳。如果 API 噴 429 錯誤，它會拋出 Exception，
-    這樣 Streamlit 就『不會』緩存錯誤訊息，下次重整才會重新挑戰 API。
-    """
-    news_context = " | ".join(news_list) if news_list else "暫無即時重大新聞"
-    prompt = f"針對 {name} 診斷。現價:{price}, PE:{pe}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, 新聞:{news_context}。請給出實戰部署，100字內。"
+def get_ai_analysis(name, price, rsi, chip_flow, trend, news_list):
+    news_context = " | ".join(news_list[:2]) if news_list else "暫無重大新聞"
+    prompt = f"分析 {name}。價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}。新聞:{news_context}。請給出專業佈署建議，100字內。"
     
-    # 嘗試 Groq
-    if ai_engines["groq"]:
-        try:
-            completion = ai_engines["groq"].chat.completions.create(
+    try:
+        if ai_engines["groq"]:
+            res = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}],
-                timeout=8 # 快速超時，不要卡住
+                messages=[{"role": "user", "content": prompt}], timeout=8
             )
-            return "🔥 策略室： " + completion.choices[0].message.content
-        except Exception as e:
-            pass # 失敗了，改試下一家
-            
-    # 嘗試 Gemini
-    if ai_engines["gemini"]:
-        try:
+            return "🔥 策略室： " + res.choices[0].message.content
+        elif ai_engines["gemini"]:
             res = ai_engines["gemini"].generate_content(prompt)
-            if res.text:
-                return "🔮 戰略部： " + res.text
-        except:
-            pass
-
-    # 如果都失敗，拋出異常，防止 Streamlit 緩存 "錯誤字串"
-    raise Exception("API_LIMIT_REACHED")
+            return "🔮 戰略部： " + res.text
+    except:
+        return "⏳ API 暫時繁忙，請稍後刷新。已顯示技術指標。"
+    return "AI 診斷未配置"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name, news):
     score = 60
