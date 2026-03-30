@@ -30,16 +30,16 @@ for ticker, name in tickers.items():
     d = raw_db.get("stocks", {}).get(ticker, {})
     report = ai_db.get("reports", {}).get(ticker, "🤖 策略家正在分析中...")
 
-    # 預處理數據
-    p = d.get('price', '---')
-    pe = round(float(d.get('pe', 0)), 2) if d.get('pe') not in ['---', None] else '---'
-    gr = d.get('growth', '---')
-    sup = d.get('support', '---')
-    pre = d.get('pressure', '---')
+    # 預處理數據 (確保變數乾淨)
+    p = str(d.get('price', '---'))
+    pe = str(round(float(d.get('pe', 0)), 2)) if d.get('pe') not in ['---', None] else '---'
+    gr = str(d.get('growth', '---'))
+    sup = str(d.get('support', '---'))
+    pre = str(d.get('pressure', '---'))
 
-    st.markdown(f"""
+    # 分段組合 HTML，避開 f-string 解析大括號的問題
+    header_html = f"""
     <div style="background:#fff9f9; border-left:12px solid #e53935; padding:15px; border-radius:12px; margin-bottom:30px; border:1px solid #ffdde0; font-family: sans-serif;">
-        
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap: wrap;">
             <div style="min-width: 200px;">
                 <h1 style="color:#b71c1c; margin:0; font-size:2em;">☢️ {name} ({ticker})</h1>
@@ -52,9 +52,10 @@ for ticker, name in tickers.items():
                 RSI: 53.4 | 籌碼: ☁️ 盤整 | 量比: 1.8x
             </div>
         </div>
-
         <hr style="border:0.5px solid #ffcdd2; margin:10px 0;">
+    """
 
+    dashboard_html = f"""
         <div style="background:white; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap:10px;">
                 <div style="flex:1; min-width:140px; text-align:center; border-right:1px solid #eee;">
@@ -72,16 +73,20 @@ for ticker, name in tickers.items():
                 </div>
             </div>
         </div>
+    """
 
+    ai_html = f"""
         <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:10px;">
             <b style="font-size:1.1em; color:#333;">🧠 智權診斷 (AI 版)：</b>
             <div style="margin-top:10px; font-size:1.05em; line-height:1.6; color:#444; white-space: pre-wrap;">
-                {report}
+{report}
             </div>
         </div>
-
     </div>
-    """, unsafe_allow_html=True)
+    """
+
+    # 最終合併渲染
+    st.markdown(header_html + dashboard_html + ai_html, unsafe_allow_html=True)
 
 # 自動刷新
 time.sleep(60)
