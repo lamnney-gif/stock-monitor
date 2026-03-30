@@ -16,26 +16,31 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
+import time
+from datetime import datetime, timezone
+
 # --- 2. 狀態列：精準倒數邏輯 ---
 col_status1, col_status2 = st.columns(2)
-
-with col_status1:
-    refresh_timer = st.empty() # 網頁 60 秒刷新
 
 with col_status2:
     ai_time_str = ai_db.get("last_update", "---").strip()
     raw_time_str = raw_db.get("last_update", "---").strip()
 
-    # 💡 核心修正：使用相對時間差，無視絕對時區
     def get_remaining_seconds(time_str, limit_minutes):
         if time_str == "---": return None
         try:
-            # 1. 解析存檔時間
-            last_dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
-            # 2. 取得「當下」與「存檔」的絕對秒數差 (不論時區，只看間隔)
-            # 透過 timestamp() 轉換為自 1970 年以來的秒數，這在所有主機上都是對齊的
-            elapsed_seconds = int(time.time() - last_dt.timestamp())
-            # 3. 計算剩餘秒數
+            # 1. 將字串轉為 datetime 物件
+            dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+            
+            # 2. 關鍵：強制指定這串時間是 UTC (因為 GitHub Actions 在 UTC 跑)
+            # 如果你的 analyzer.py 是在 GitHub 跑的，它存的就是 UTC
+            dt_utc = dt.replace(tzinfo=timezone.utc)
+            
+            # 3. 計算從存檔到「現在」經過了多少秒
+            # time.time() 永遠返回目前的 UTC Timestamp
+            elapsed_seconds = int(time.time() - dt_utc.timestamp())
+            
+            # 4. 剩餘秒數 = (限制分鐘 * 60) - 已經過的秒數
             remaining = (limit_minutes * 60) - elapsed_seconds
             return remaining
         except:
@@ -52,10 +57,14 @@ with col_status2:
     # --- B. 行情數據倒數 (15分鐘) ---
     raw_rem = get_remaining_seconds(raw_time_str, 15)
     if raw_rem is not None:
+        # 如果算出來數字還是大得離譜（例如 > 15分鐘），代表兩邊都是本地時間，不需要轉 UTC
+        # 這裡做一個自動修正保險：
+        if raw_rem > 1000: 
+            raw_rem -= 28800 # 扣掉 8 小時
+            
         if raw_rem > 0:
             st.success(f"📈 行情下次更新：{raw_rem//60} 分 {raw_rem%60} 秒後")
         else:
-            # 如果超過 15 分鐘還沒更新，顯示 Error 提醒
             st.error(f"⚠️ 行情刷新延遲 (最後存檔: {raw_time_str})")
 # --- 3. 免責聲明 ---
 st.markdown("""
