@@ -124,27 +124,31 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷腦 (移除新聞，專注數據) ---
-@st.cache_data(ttl=1800)  # 每 30 分鐘失效一次，強迫 AI 更新對當下局勢的理解
+@st.cache_data(ttl=1800)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
-    # --- 動態獲取今天日期 ---
+    from datetime import datetime
     current_date = datetime.now().strftime("%Y年%m月%d日")
     
-    # 指令改為「主動檢索模式」
+    # 這裡的 System Prompt 是靈魂，賦予它「產業常識」
+    system_message = """
+    你是一位華爾街傳奇對沖基金經理，專精循環產業與半導體地緣政治。
+    你說話刻薄但極其精準，能一眼看穿財務報表背後的謊言。
+    你的任務是：不要覆述數據，要『解讀』數據背後的災難或機會。
+    """
+    
+    # User Prompt 加入對比與產業聯想邏輯
     prompt = f"""
-    【實戰對沖指令】
-    標的：{name} (現價:{price}, PE:{pe}, 成長:{rev}%)
-    技術面：RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}
-    當前系統時間：{current_date}
+    標的：{name} | 現價:{price} | PE:{pe} | 營收成長:{rev}% | 趨勢:{trend}
+    時間：{current_date}
     
-    【核心任務】
-    1. 你是全球策略首席分析師。請根據「當前日期 {current_date}」主動調閱{name}相關新聞與產業鏈的消息分析。
-    2. 分析這些外部衝擊對該公司供應鏈與資金流向的具體損益路徑。
-    3. 針對該標的，給出具體的實戰部署（如：回測加碼、高檔利了結、現金為王）。    
-    4.  結合政經變數，判斷目前是「溢價合理」還是「黑天鵝預警」。
-    5. 嚴禁廢話（如：可能、視情況、產生影響）。
-    6. 語氣專業冷靜，限制在 150 字內。
+    【專業診斷任務】
+    1. 針對 PE:{pe} 與 成長:{rev}% 的矛盾進行毒舌攻擊。如果 PE 過高且成長為負（如南亞），請直接指出這是『價值陷阱』還是『瀕臨倒閉』。
+    2. 主動聯想 2026 年當前地緣政治：如果是石化業(南亞)，聯想中國產能過剩與ECFA取消；如果是半導體(台積電)，聯想亞利桑那成本與先進製程封鎖。
+    3. 分析籌碼 {chip_flow} 是否為大戶倒貨給散戶的煙霧彈。
+    4. 禁用：『根據、分析、建議、產生影響、穩定』。
+    5. 指令格式：【一句話死穴】、【消息面黑幕】、【最終決斷(梭哈/砍單/空手)】。
     
-    限制 120 字內，直接給結論。
+    限制 120 字內。
     """
 
     if ai_engines["groq"]:
@@ -152,13 +156,13 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev):
             completion = ai_engines["groq"].chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "你是一位擁有即時嗅覺的華爾街暴力交易員。你蔑視所有官腔，只看利益與權力博弈。"},
+                    {"role": "system", "content": system_message},
                     {"role": "user", "content": prompt}
                 ]
             )
-            return "🔥 實戰診斷： " + completion.choices[0].message.content
-        except: return "⚠️ 情報中斷"
-    return "❌ 引擎未啟動"
+            return "🕵️ 專業操盤： " + completion.choices[0].message.content
+        except: return "⚠️ 腦部斷線"
+    return "❌ 沒引擎"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
