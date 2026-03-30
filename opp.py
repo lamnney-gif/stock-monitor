@@ -18,6 +18,7 @@ st.set_page_config(page_title="Beta Lab AI Ultimate - 物理級還原完整版",
 def init_ai_engines():
     engines = {"groq": None}
     try:
+        # 確保 Secrets 存在，否則不崩潰
         if "GROQ_API_KEY" in st.secrets:
             engines["groq"] = Groq(api_key=st.secrets["GROQ_API_KEY"].strip())
     except:
@@ -44,7 +45,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 3. CSS 樣式 (完全還原，不漏任何一個 class)
+# 3. CSS 樣式 (物理級還原，一個 class 都不准漏)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -65,7 +66,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律防護與 RSS (完全還原) ---
+# --- 側邊欄：法律防護與 RSS (一字不漏) ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px; font-size: 0.85em;">
@@ -77,7 +78,7 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# RSS 新聞功能 (還原)
+# RSS 新聞功能
 def get_stock_news(q):
     try:
         url = f"https://news.google.com/rss/search?q={quote(q)}+stock&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
@@ -93,7 +94,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. 核心演算 (還原所有複雜指標)
+# 4. 核心演算
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -110,13 +111,13 @@ def get_volume_support(df):
     except: return 0
 
 # --- 5. AI 權重診斷 (高盛魂 + Groq) ---
-@st.cache_data(ttl=14400)
+@st.cache_data(ttl=3600)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
     if not ai_engines["groq"]: return "❌ Groq 引擎離線"
-    fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。守住支撐位。"
+    fallback = f"數據提示：RSI {rsi:.1f}，籌碼{chip_flow}，趨勢{trend}。"
     prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 一句話結論(50字內)。"
     try:
-        time.sleep(1.8)
+        time.sleep(1.0) # 緩解 API 併發壓力
         res = ai_engines["groq"].chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}]
@@ -138,33 +139,37 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     style = "✅" if score >= 65 else "⚠️" if score >= 45 else "☢️"
     return score, ai_report, style
 
-# 6. 主數據流 (還原所有 tickers 與 variables)
+# 6. 主數據流 (物理還原)
 tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 data_list = []
 
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ Beta Lab AI Ultimate - 數據全量對齊")
+with col_t: st.title("🖥️ Beta Lab AI Ultimate - 穩定修正版")
 with col_r: timer_placeholder = st.empty()
 
-with st.spinner('同步全球數據與 AI 模擬中...'):
-    # --- VIX 抓取防崩潰修正 ---
+# --- 核心抓取邏輯 (增加防崩潰) ---
+with st.spinner('同步全球數據中...'):
+    # VIX 防爆
     try:
-        vix_df = yf.Ticker("^VIX").history(period="5d")
-        vix = round(vix_df['Close'].iloc[-1], 2) if not vix_df.empty else 20.0
+        v_df = yf.Ticker("^VIX").history(period="5d")
+        vix = round(v_df['Close'].iloc[-1], 2) if not v_df.empty else 20.0
     except: vix = 20.0
 
+    # SOX 防爆
     try:
-        sox_df = yf.Ticker("^SOX").history(period="1mo")
-        sox_status = "📈 BULL" if (not sox_df.empty and sox_df['Close'].iloc[-1] > sox_df['Close'].mean()) else "📉 BEAR"
+        s_df = yf.Ticker("^SOX").history(period="1mo")
+        sox_status = "📈 BULL" if (not s_df.empty and s_df['Close'].iloc[-1] > s_df['Close'].mean()) else "📉 BEAR"
     except: sox_status = "📉 BEAR"
 
+    # 10Y Yield 防爆
     try:
-        us10y_df = yf.Ticker("^TNX").history(period="1d")
-        us10y = us10y_df['Close'].iloc[-1] if not us10y_df.empty else 4.0
+        u_df = yf.Ticker("^TNX").history(period="1d")
+        us10y = u_df['Close'].iloc[-1] if not u_df.empty else 4.0
     except: us10y = 4.0
 
     for ticker, name in tickers.items():
         try:
+            time.sleep(1.0) # 強制延遲，防止 Yahoo 封鎖 IP
             stock = yf.Ticker(ticker)
             df = stock.history(period="1y")
             df_w = stock.history(period="2y", interval="1wk")
@@ -175,7 +180,6 @@ with st.spinner('同步全球數據與 AI 模擬中...'):
             ma20, std20 = df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(20).std().iloc[-1]
             vol_ratio = df['Volume'].iloc[-1] / (df['Volume'].iloc[-6:-1].mean() + 1e-9)
             
-            # --- 數據變數 (物理還原) ---
             pe_val = f"{s_info.get('trailingPE', 0):.1f}"
             rev_growth = f"{(s_info.get('revenueGrowth', 0) or 0) * 100:.1f}%"
             inst_hold = f"{s_info.get('heldPercentInstitutions', 0)*100:.1f}%"
@@ -192,7 +196,6 @@ with st.spinner('同步全球數據與 AI 模擬中...'):
             bias = round(((close_val - ma20) / ma20) * 100, 2)
             slope = (LinearRegression().fit(np.arange(10).reshape(-1,1), df['Close'].tail(10).values.reshape(-1,1)).coef_[0][0] / close_val) * 100
 
-            # 支撐位與防守
             chip_floor = get_volume_support(df)
             stop_line = df['High'].tail(5).max() * 0.97
             dynamic_stop = close_val - (2.5 * atr_val)
@@ -212,7 +215,7 @@ with st.spinner('同步全球數據與 AI 模擬中...'):
             })
         except: continue
 
-# --- 7. UI 渲染 (完全還原 HTML 結構) ---
+# --- 7. UI 渲染 (一字不刪) ---
 st.sidebar.markdown(f"📊 **全球指標**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
 
 for d in data_list:
@@ -247,7 +250,6 @@ for d in data_list:
     </div>
     """, unsafe_allow_html=True)
 
-# 8. 自動刷新計時
 for i in range(60, 0, -1):
     timer_placeholder.markdown(f"🔄 {i}s 後刷新")
     time.sleep(1)
