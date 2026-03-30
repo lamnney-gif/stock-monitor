@@ -1,30 +1,56 @@
 name: 60s Market Monitor
+
 on:
   schedule:
-    - cron: '*/5 * * * *'  # UTC，每 15 分鐘跑一次
+    - cron: '*/5 * * * *'  # 每 5 分鐘 (UTC)
   workflow_dispatch:
+
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
+      # 1️⃣ 取得最新程式碼
       - uses: actions/checkout@v3
+
+      # 2️⃣ 設定 Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
+      # 3️⃣ 安裝依賴
       - name: Install deps
-        run: pip install yfinance pandas
+        run: |
+          pip install --upgrade pip
+          pip install yfinance pandas
+
+      # 4️⃣ 執行 fetcher.py 更新 data_raw.json
       - name: Run Fetcher
         run: python fetcher.py
-      - name: Show last update
-        run: |
-          python -c "import json; data=json.load(open('data_raw.json')); print('上次更新時間:', data.get('last_update'))"
-      - name: Push
+
+      # 5️⃣ 檢查檔案是否真的有更新
+      - name: Show last 5 lines of data
+        run: tail -n 5 data_raw.json
+
+      # 6️⃣ Commit + Push (只在檔案有變更時)
+      - name: Commit and Push if changed
+        env:
+          TZ: Asia/Taipei
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "MarketBot"
           git add data_raw.json
-          git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "📈 實時行情更新: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
+
+      # 7️⃣ 顯示最後更新時間
+      - name: Show last update
+        run: |
+          python -c "import json; data=json.load(open('data_raw.json')); print('上次更新時間:', data.get('last_update'))"
