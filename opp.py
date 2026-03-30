@@ -10,7 +10,7 @@ import time
 import random
 from groq import Groq
 
-# 1. 頁面配置
+# 1. 頁面配置 (1600px 寬版)
 st.set_page_config(page_title="Beta Lab AI Ultimate - 物理級還原完整版", layout="wide")
 
 # --- 2. AI 核心啟動 ---
@@ -38,12 +38,13 @@ def check_password():
             st.rerun()
         else:
             st.error("😕 驗證失敗")
+            return False
     return False
 
 if not check_password():
     st.stop()
 
-# 3. CSS 樣式 (一字不漏，包含所有顏色指標與手機警告)
+# 3. CSS 樣式 (物理級還原，不漏任何一個 class)
 st.markdown("""
     <style>
     .status-card { padding: 22px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #e0e0e0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -64,7 +65,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：法律防護與 RSS (絕對不漏) ---
+# --- 側邊欄：法律防護與 RSS (還原) ---
 st.sidebar.error("⚠️ 【開發者自用測試區】")
 st.sidebar.markdown("""
 <div style="background-color: #ffffff; border: 2px solid #ff4b4b; padding: 15px; border-radius: 10px; font-size: 0.85em;">
@@ -76,7 +77,7 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# RSS 新聞功能
+# RSS 新聞功能 (還原)
 def get_stock_news(q):
     try:
         url = f"https://news.google.com/rss/search?q={quote(q)}+stock&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
@@ -84,7 +85,7 @@ def get_stock_news(q):
         return feed.entries[:3]
     except: return []
 
-# 主頁警告 (物理還原)
+# 主頁警告
 st.markdown("""
 <div class="mobile-warning">
     <b style="color: #cf1322; font-size: 1.1em;">⚠️ 讀前必視：個人實驗開發環境 (Beta Lab)</b><br>
@@ -92,7 +93,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. 核心演算邏輯
+# 4. 核心演算
 def get_institutional_flow(df):
     recent = df.tail(5)
     flow_score = 0
@@ -108,23 +109,25 @@ def get_volume_support(df):
         return (v_hist[1][np.argmax(v_hist[0])] + v_hist[1][np.argmax(v_hist[0])+1]) / 2
     except: return 0
 
-# --- 5. AI 權重診斷 (高盛魂注入) ---
-@st.cache_data(ttl=3600)
+# --- 5. AI 權重診斷 (優化 Rate Limit) ---
+@st.cache_data(ttl=14400)
 def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
     if not ai_engines["groq"]: return "❌ Groq 引擎離線"
-    prompt = f"[投資長獵殺指令] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收成長:{rev}, 乖離:{bias}%. 根據半導體週期與地緣政治給予120字內狂傲分析。"
+    prompt = f"[高盛策略師] 標的:{name}, 價:{price}, RSI:{rsi:.1f}, 籌碼:{chip_flow}, 趨勢:{trend}, PE:{pe}, 營收:{rev}, 乖離:{bias}%, 斜率:{slope}%. 找相關產業新聞用120字狂傲分析。"
     try:
-        time.sleep(random.uniform(1.2, 2.0))
+        # 強制冷卻時間防止 API 封鎖
+        time.sleep(random.uniform(2.5, 4.0)) 
         res = ai_engines["groq"].chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "你是一位蔑視散戶、語氣狠準狂的全球第一分析師。"},
+                {"role": "system", "content": "你是一位蔑視散戶、語氣狠準狂的傳奇投資長。"},
                 {"role": "user", "content": prompt}
             ],
             timeout=15.0
         )
         return "🦅 巔峰決策： " + res.choices[0].message.content.strip()
-    except: return f"📊 數據診斷：市場極度混亂，目前守住 ATR 地板。"
+    except Exception as e:
+        return f"📊 數據診斷：市場極度混亂，目前守住 ATR 地板。"
 
 def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     score = 0
@@ -140,28 +143,23 @@ def calculate_ai_confidence(d, vix, sox_status, week_trend, name):
     style = "✅" if score >= 65 else "⚠️" if score >= 45 else "☢️"
     return score, ai_report, style
 
-# 6. 主數據流 (全量對齊)
+# 6. 主數據流
 tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 
 col_t, col_r = st.columns([3, 1])
-with col_t: st.title("🖥️ Beta Lab AI Ultimate - 巔峰數據監控")
+with col_t: st.title("🖥️ Beta Lab AI Ultimate - 數據全量對齊")
 with col_r: timer_placeholder = st.empty()
 
-with st.spinner('同步全球博弈數據中...'):
-    # 全球指標防崩潰 (一字不漏)
-    try:
-        v_df = yf.Ticker("^VIX").history(period="5d")
-        vix = round(v_df['Close'].iloc[-1], 2) if not v_df.empty else 20.0
-        s_df = yf.Ticker("^SOX").history(period="1mo")
-        sox_status = "📈 BULL" if (not s_df.empty and s_df['Close'].iloc[-1] > s_df['Close'].mean()) else "📉 BEAR"
-        u_df = yf.Ticker("^TNX").history(period="1d")
-        us10y = u_df['Close'].iloc[-1] if not u_df.empty else 4.0
-    except:
-        vix, sox_status, us10y = 20.0, "📉 BEAR", 4.0
+with st.spinner('同步全球數據與 AI 模擬中...'):
+    v_df = yf.Ticker("^VIX").history(period="1d")
+    vix = v_df['Close'].iloc[-1] if not v_df.empty else 20.0
+    sox_df = yf.Ticker("^SOX").history(period="1mo")
+    sox_status = "📈 BULL" if (not sox_df.empty and sox_df['Close'].iloc[-1] > sox_df['Close'].mean()) else "📉 BEAR"
+    u_df = yf.Ticker("^TNX").history(period="1d")
+    us10y = u_df['Close'].iloc[-1] if not u_df.empty else 4.0
 
     st.sidebar.markdown(f"📊 **全球指標**\n- VIX: {vix:.1f}\n- 10Y Yield: {us10y:.2f}%\n- SOX: {sox_status}")
 
-    # 7. 渲染區
     for ticker, name in tickers.items():
         try:
             stock = yf.Ticker(ticker)
@@ -199,6 +197,7 @@ with st.spinner('同步全球博弈數據中...'):
                 vix, sox_status, "UP" if close_val > ma20 else "DOWN", name
             )
 
+            # --- UI 渲染 (逐檔印出，確保 9 檔全部顯示) ---
             st.markdown(f"""
             <div class="status-card {ai_style}">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -211,7 +210,7 @@ with st.spinner('同步全球博弈數據中...'):
                 <hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">
                 <div style="display: flex; gap: 25px;">
                     <div style="flex: 2.2;">
-                        <b>🧠 巔峰決策 (傳奇 CIO)：</b><br><span style="line-height:1.6; font-size:1.1em;">{ai_diag}</span>
+                        <b>🧠 智權診斷 (機構核心)：</b><br><span style="line-height:1.6; font-size:1.1em;">{ai_diag}</span>
                         <div class="defense-box">
                             ⚙️ <b>風控模擬：</b> 
                             <span style="color:#1890ff;">止盈防線: {round(stop_line, 2)}</span> | 
@@ -229,7 +228,8 @@ with st.spinner('同步全球博弈數據中...'):
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        except: continue
+        except Exception as e:
+            continue
 
 # 8. 自動刷新
 for i in range(60, 0, -1):
