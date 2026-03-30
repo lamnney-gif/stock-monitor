@@ -6,15 +6,22 @@ from string import Template
 
 st.set_page_config(page_title="Beta Lab AI Ultimate", layout="wide")
 
-# --- 1. 數據載入 ---
+# --- 1. 數據載入 (強化的 JSON 讀取) ---
 def load_data():
     raw_p, ai_p = "data_raw.json", "analysis_results.json"
-    # 增加錯誤檢查，防止檔案損壞導致崩潰
     try:
-        r = json.load(open(raw_p, "r", encoding="utf-8")) if os.path.exists(raw_p) else {"stocks": {}}
-        a = json.load(open(ai_p, "r", encoding="utf-8")) if os.path.exists(ai_p) else {"reports": {}}
-    except Exception as e:
-        st.error(f"數據讀取失敗: {e}")
+        if os.path.exists(raw_p):
+            with open(raw_p, "r", encoding="utf-8") as f:
+                r = json.load(f)
+        else:
+            r = {"stocks": {}}
+            
+        if os.path.exists(ai_p):
+            with open(ai_p, "r", encoding="utf-8") as f:
+                a = json.load(f)
+        else:
+            a = {"reports": {}}
+    except:
         r, a = {"stocks": {}}, {"reports": {}}
     return r, a
 
@@ -22,9 +29,7 @@ def load_data():
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:25px;">
     <h3 style="color:#ef6c00; margin:0;">⚠️ 系統使用免責聲明</h3>
-    <p style="color:#5d4037; font-size:0.9em; margin-top:5px;">
-        本平台數據僅供參考。金融投資具高風險，AI 診斷不代表買賣建議，請投資者審慎評估。
-    </p>
+    <p style="color:#5d4037; font-size:0.9em; margin-top:5px;">本數據僅供參考，不代表投資建議。投資者應自行評估風險。</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -35,7 +40,7 @@ if not st.session_state["auth"]:
         st.rerun()
     st.stop()
 
-# --- 3. HTML 模板 (Template 模式) ---
+# --- 3. HTML 模板 (Template 穩定版) ---
 CARD_STYLE = Template("""
 <div style="background:#fff9f9; border-left:12px solid #e53935; padding:20px; border-radius:12px; border:1px solid #ffdde0; font-family: sans-serif; margin-bottom: 30px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -71,24 +76,28 @@ CARD_STYLE = Template("""
 </div>
 """)
 
-# --- 4. 數據渲染與多重 Key 備援 ---
+# --- 4. 數據填充渲染 ---
 raw_db, ai_db = load_data()
 tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
 
 for ticker, name in tickers.items():
-    d = raw_db.get("stocks", {}).get(ticker, {})
+    # 獲取個股數據，並統一轉成小寫鍵值方便查詢
+    stock_raw = raw_db.get("stocks", {}).get(ticker, {})
+    d = {str(k).lower(): v for k, v in stock_raw.items()} # 自動轉小寫保護
+    
     report_text = ai_db.get("reports", {}).get(ticker, "🤖 分析同步中...")
     report_clean = str(report_text).replace("\n", "<br>").replace("'", "&apos;")
 
-    # 數據對接（增加備援 Key，防止爬蟲命名不一致）
+    # 數據對接：增加多重路徑確保一定抓得到
     card_html = CARD_STYLE.safe_substitute(
         NAME=name,
         TICKER=ticker,
-        PRICE=str(d.get('price', d.get('Close', '---'))),
-        PE=str(round(float(d.get('pe', 0)), 2)) if d.get('pe') not in ['---', None] else '---',
+        PRICE=str(d.get('price', '---')),
+        PE=str(round(float(d.get('pe', 0)), 2)) if d.get('pe') else '---',
         GROWTH=str(d.get('growth', '---')),
-        RSI=str(d.get('rsi', d.get('RSI', '00'))), # 如果沒有就預設00
-        CHIPS=str(d.get('chips', d.get('institutional_ownership', '---'))),
+        # 這裡就是關鍵：如果讀不到 RSI 就看大寫，再讀不到就給 50
+        RSI=str(d.get('rsi', '50')), 
+        CHIPS=str(d.get('chips', d.get('chips_status', '---'))),
         VOL_RATIO=str(d.get('volume_ratio', d.get('vol_ratio', '---'))),
         BUY_POINT=str(d.get('buy_point', '---')),
         SUPPORT=str(d.get('support', '---')),
@@ -99,9 +108,8 @@ for ticker, name in tickers.items():
     )
     st.markdown(card_html, unsafe_allow_html=True)
 
-# --- 5. 除錯診斷區 (僅在開發時開啟，這能幫你看到 JSON 到底長怎樣) ---
-with st.expander("🛠️ 數據診斷器 (Debug)"):
-    st.write("目前載入的 raw_db 內容：")
+# --- 5. 除錯開關 (如果有問題，展開這個看原始 JSON) ---
+with st.expander("🛠️ 數據後台診斷器"):
     st.json(raw_db)
 
 time.sleep(60)
