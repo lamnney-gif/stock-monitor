@@ -16,53 +16,37 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列：強制全 UTC 運算 ---
-col_refresh, col_status2 = st.columns(2)
+# --- 2. 狀態列 (確保 60 秒倒數與行情更新並存) ---
+col_left, col_right = st.columns([1, 1])
 
-with col_refresh:
-    # 這裡就是 60 秒刷新計時器，變數名統一
-    refresh_timer = st.empty() 
+with col_left:
+    # 💡 這裡定義名稱為 refresh_timer，這就是你的 60 秒
+    refresh_timer = st.empty()
+    # 先給一個初始值，避免它消失
+    refresh_timer.metric("🔄 網頁刷新倒數", "60 秒")
 
-with col_status2:
-    ai_time_str = ai_db.get("last_update", "---").strip()
+with col_right:
     raw_time_str = raw_db.get("last_update", "---").strip()
-
-    def get_remaining_seconds(time_str, limit_minutes):
-        if time_str == "---" or not time_str: return None
+    if raw_time_str != "---":
         try:
-            # 1. 解析檔案裡的時間 (例如 03:06:58)
-            dt_file = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+            # 1. 解析檔案時間 (03:06:58)
+            last_dt = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
+            # 2. 計算目前時間與它的分鐘差 (台北 vs UTC)
+            diff_mins = (datetime.now() - last_dt).total_seconds() / 60
             
-            # 2. 💡 關鍵：獲取「現在的 UTC 時間」而非台北時間
-            # 這會讓 11:23 (台北) 變回 03:23 (UTC)
-            now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+            # 3. 💡 暴力對齊時差：如果你差了 8 小時 (480分)，我們把它扣掉
+            if diff_mins > 400:
+                diff_mins -= 480
             
-            # 3. 計算秒數差 (03:23 - 03:06 = 17 分鐘)
-            elapsed_seconds = int((now_utc - dt_file).total_seconds())
+            # 4. 算出 15 分鐘還剩多少
+            rem_sec = int((15 - diff_mins) * 60)
             
-            # 4. 算出剩餘秒數
-            remaining = (limit_minutes * 60) - elapsed_seconds
-            return remaining
+            if rem_sec > 0:
+                st.success(f"📈 行情更新：{rem_sec // 60} 分 {rem_sec % 60} 秒後")
+            else:
+                st.warning("⏳ 行情同步中...")
         except:
-            return None
-
-    # --- A. AI 診斷倒數 (240分鐘) ---
-    ai_rem = get_remaining_seconds(ai_time_str, 240)
-    if ai_rem is not None:
-        if ai_rem > 0:
-            st.info(f"🤖 AI 下次改版：{int(ai_rem//3600)}時 {int((ai_rem%3600)//60)}分後")
-        else:
-            st.warning(f"⏳ AI 同步中...")
-
-    # --- B. 行情數據倒數 (15分鐘) ---
-    raw_rem = get_remaining_seconds(raw_time_str, 15)
-    if raw_rem is not None:
-        if raw_rem > 0:
-            # 這裡現在會顯示 15 分鐘內的正常倒數，不再有 479 分
-            st.success(f"📈 行情下次更新：{int(raw_rem//60)} 分 {int(raw_rem%60)} 秒後")
-        else:
-            # 如果超過 15 分鐘沒更新，變紅色
-            st.error(f"⚠️ 行情延遲中 (最後存檔: {raw_time_str} UTC)")
+            st.write("🕒 行情時間計算中...")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
