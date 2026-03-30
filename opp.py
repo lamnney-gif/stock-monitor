@@ -16,37 +16,32 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列 (確保 60 秒倒數與行情更新並存) ---
-col_left, col_right = st.columns([1, 1])
+# --- 3. 狀態列 (變數：refresh_timer) ---
+col_left, col_right = st.columns([1, 2])
 
 with col_left:
-    # 💡 這裡定義名稱為 refresh_timer，這就是你的 60 秒
+    # 這裡就是你消失的 60 秒刷新
     refresh_timer = st.empty()
-    # 先給一個初始值，避免它消失
-    refresh_timer.metric("🔄 網頁刷新倒數", "60 秒")
 
 with col_right:
     raw_time_str = raw_db.get("last_update", "---").strip()
+    
     if raw_time_str != "---":
         try:
-            # 1. 解析檔案時間 (03:06:58)
+            # 1. 解析檔案時間
             last_dt = datetime.strptime(raw_time_str, "%Y-%m-%d %H:%M:%S")
-            # 2. 計算目前時間與它的分鐘差 (台北 vs UTC)
-            diff_mins = (datetime.now() - last_dt).total_seconds() / 60
+            # 2. 計算秒數差 (取絕對值，無視誰減誰)
+            diff_sec = abs(int((datetime.now() - last_dt).total_seconds()))
             
-            # 3. 💡 暴力對齊時差：如果你差了 8 小時 (480分)，我們把它扣掉
-            if diff_mins > 400:
-                diff_mins -= 480
+            # 3. 💡 終極大招：15 分鐘取餘數 (900秒)
+            # 這樣管你時差幾小時，餘數永遠會落在 0~899 秒之間
+            rem_sec = 900 - (diff_sec % 900)
             
-            # 4. 算出 15 分鐘還剩多少
-            rem_sec = int((15 - diff_mins) * 60)
-            
-            if rem_sec > 0:
-                st.success(f"📈 行情更新：{rem_sec // 60} 分 {rem_sec % 60} 秒後")
-            else:
-                st.warning("⏳ 行情同步中...")
-        except:
-            st.write("🕒 行情時間計算中...")
+            # 顯示倒數
+            st.success(f"📈 行情下次更新預計：{rem_sec // 60} 分 {rem_sec % 60} 秒後")
+            st.caption(f"數據基準點：{raw_time_str} (目前系統時間: {datetime.now().strftime('%H:%M:%S')})")
+        except Exception as e:
+            st.error(f"時間計算錯誤: {e}")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
