@@ -101,7 +101,7 @@ CARD_STYLE = Template("""
                 <b style="color:#333; font-size:0.9em;">⚙️ 風控與成本模擬：</b><br>
                 <span style="color:#1565c0; font-size:0.85em;">防守觀察點: $SUPPORT</span> | <span style="color:#c62828; font-size:0.85em;">ATR地板: $ATR</span>
             </div>
-            <div style="flex:1; min-width:150px;"><b style="color:#333; font-size:0.9em;">📊 市場分佈：</b><br><span style="color:#555; font-size:0.85em;">密集換手區: $TURNOVER</span></div>
+            <div style="flex:1; min-width:150px;"><b style="color:#333; font-size:0.9em;">📊 市場分佈：</b><br><span style="color:#555; font-size:0.85em;">密集換手區(大部份買點): $TURNOVER</span></div>
         </div>
     </div>
     <div style="background:rgba(255,255,255,0.8); padding:15px; border-radius:10px;">
