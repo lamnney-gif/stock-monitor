@@ -91,7 +91,15 @@ def get_ai_analysis(name, price, rsi, chip_flow, trend, pe, rev, bias, slope):
     except: return "📊 智庫忙碌 (Rate Limit)，暫觀技術指標。"
 
 # 5. 主程序與數據循環
-tickers = {"2330.TW": "台積電", "NVDA": "輝達", "MU": "美光", "000660.KS": "海力士", "2303.TW": "聯電", "6770.TW": "力積電", "2344.TW": "華邦電", "3481.TW": "群創", "1303.TW": "南亞"}
+tickers = {"2330.TW": "台積電", 
+           "NVDA": "輝達", 
+           "MU": "美光", 
+           "000660.KS": "海力士", 
+           "2303.TW": "聯電", 
+           "6770.TW": "力積電", 
+           "2344.TW": "華邦電", 
+           "3481.TW": "群創", 
+           "1303.TW": "南亞"}
 
 st.title("🖥️ Beta Lab AI Ultimate")
 st.markdown('<div class="mobile-warning">⚠️ 個人實驗環境 - 自動化實驗產出，非投資建議。</div>', unsafe_allow_html=True)
