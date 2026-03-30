@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-03-30 20:18:51",
+    "last_update": "2026-03-30 20:21:33",
     "stocks": {
         "2330.TW": {
             "price": 1780.0,
@@ -32,7 +32,7 @@
             "price": 873000.0,
             "rsi": 0.0,
             "pe": "---",
-            "volume_ratio": 1.0,
+            "volume_ratio": 1.07,
             "support": 829350.0,
             "pressure": 916650.0,
             "turnover_zone": 855540.0
