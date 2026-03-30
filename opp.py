@@ -16,23 +16,23 @@ def load_data():
 
 raw_db, ai_db = load_data()
 
-# --- 2. 狀態列 (純顯示存檔點，不進行時間運算) ---
-col_status1, col_status2 = st.columns(2)
-
-with col_status1:
-    # 保持 60 秒網頁自動重新整理倒數
-    refresh_timer = st.empty() 
-
-with col_status2:
-    # 直接讀取 AI 報告中的存檔時間字串
-    ai_last_time = ai_db.get("last_update", "---")
-    
-    if ai_db.get("reports") and ai_last_time != "---":
-        # 只要有資料，就顯示綠色成功訊息，並直接印出存檔點
-        st.success(f"✅ AI 診斷：已接入最新報告 (雲端存檔點: {ai_last_time})")
-    else:
-        st.warning("⏳ AI 診斷：等待雲端數據同步中 (GitHub Actions 載入中)...")
-
+# --- 狀態列與 AI 倒數 ---
+col1, col2 = st.columns(2)
+with col1:
+    refresh_timer = st.empty()
+with col2:
+    update_str = ai_db.get("last_update", "---")
+    if update_str != "---":
+        try:
+            last_dt = datetime.strptime(update_str, "%Y-%m-%d %H:%M:%S")
+            # 計算與目前系統時間的差距 (自動對齊)
+            diff = (last_dt + timedelta(hours=4)) - datetime.now()
+            secs = int(diff.total_seconds())
+            if secs > 0:
+                st.info(f"🤖 AI 下次改版倒數: {secs//3600}時 {(secs%3600)//60}分")
+            else:
+                st.warning(f"⏳ 同步延遲中... (上次更新: {update_str})")
+        except: st.success(f"✅ AI 已接入 ({update_str})")
 # --- 3. 免責聲明 ---
 st.markdown("""
 <div style="background:#fff3e0; padding:15px; border-radius:10px; border:2px solid #ff9800; margin-bottom:20px;">
