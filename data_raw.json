@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-03-31 03:45:14",
+    "last_update": "2026-03-31 03:48:28",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -12,36 +12,36 @@
             "support": 1707.66,
             "pressure": 1852.34,
             "atr": 48.23,
-            "turnover_zone": 1762.2,
-            "buy_point": 1731.77
+            "turnover_zone": 1753.3,
+            "buy_point": 1722.12
         },
         "NVDA": {
             "name": "輝達",
-            "price": 164.79,
-            "pe": 33.56,
+            "price": 164.85,
+            "pe": 33.57,
             "growth": "73.2%",
-            "rsi": 25.82,
-            "volume_ratio": 0.83,
+            "rsi": 25.85,
+            "volume_ratio": 0.84,
             "chips": "💀 轉弱",
-            "support": 157.14,
-            "pressure": 172.44,
+            "support": 157.2,
+            "pressure": 172.5,
             "atr": 5.1,
-            "turnover_zone": 163.14,
-            "buy_point": 159.69
+            "turnover_zone": 162.38,
+            "buy_point": 158.73
         },
         "MU": {
             "name": "美光",
-            "price": 322.35,
-            "pe": 15.22,
+            "price": 322.87,
+            "pe": 15.24,
             "growth": "196.3%",
-            "rsi": 32.3,
-            "volume_ratio": 1.24,
+            "rsi": 32.38,
+            "volume_ratio": 1.26,
             "chips": "💀 轉弱",
-            "support": 281.97,
-            "pressure": 362.73,
+            "support": 282.49,
+            "pressure": 363.25,
             "atr": 26.92,
-            "turnover_zone": 319.13,
-            "buy_point": 295.43
+            "turnover_zone": 318.03,
+            "buy_point": 290.57
         },
         "000660.KS": {
             "name": "海力士",
@@ -54,8 +54,8 @@
             "support": 788678.56,
             "pressure": 957321.44,
             "atr": 56214.29,
-            "turnover_zone": 864270.0,
-            "buy_point": 816785.71
+            "turnover_zone": 859905.0,
+            "buy_point": 805542.85
         },
         "2303.TW": {
             "name": "聯電",
@@ -68,8 +68,8 @@
             "support": 54.28,
             "pressure": 59.72,
             "atr": 1.81,
-            "turnover_zone": 56.43,
-            "buy_point": 55.19
+            "turnover_zone": 56.14,
+            "buy_point": 54.83
         },
         "6770.TW": {
             "name": "力積電",
@@ -82,8 +82,8 @@
             "support": 49.97,
             "pressure": 66.23,
             "atr": 5.42,
-            "turnover_zone": 57.52,
-            "buy_point": 52.68
+            "turnover_zone": 57.23,
+            "buy_point": 51.6
         },
         "2344.TW": {
             "name": "華邦電",
@@ -96,8 +96,8 @@
             "support": 80.1,
             "pressure": 105.9,
             "atr": 8.6,
-            "turnover_zone": 92.07,
-            "buy_point": 84.4
+            "turnover_zone": 91.6,
+            "buy_point": 82.68
         },
         "3481.TW": {
             "name": "群創",
@@ -110,8 +110,8 @@
             "support": 21.62,
             "pressure": 27.58,
             "atr": 1.99,
-            "turnover_zone": 24.35,
-            "buy_point": 22.61
+            "turnover_zone": 24.23,
+            "buy_point": 22.21
         },
         "1303.TW": {
             "name": "南亞",
@@ -124,8 +124,8 @@
             "support": 72.74,
             "pressure": 90.06,
             "atr": 5.77,
-            "turnover_zone": 80.59,
-            "buy_point": 75.63
+            "turnover_zone": 80.18,
+            "buy_point": 74.48
         }
     }
 }
