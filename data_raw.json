@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-04-03 00:04:53",
+    "last_update": "2026-04-03 05:53:35",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -23,7 +23,7 @@
             "pe": 36.2,
             "growth": "73.2%",
             "rsi": 46.9,
-            "volume_ratio": 0.73,
+            "volume_ratio": 0.74,
             "chips": "☁️ 盤整",
             "support": 169.03,
             "pressure": 185.75,
@@ -36,10 +36,10 @@
         "MU": {
             "name": "美光",
             "price": 366.24,
-            "pe": 17.28,
+            "pe": 17.27,
             "growth": "196.3%",
             "rsi": 36.82,
-            "volume_ratio": 0.79,
+            "volume_ratio": 0.8,
             "chips": "💀 轉弱",
             "support": 306.7,
             "pressure": 425.78,
@@ -51,19 +51,19 @@
         },
         "000660.KS": {
             "name": "海力士",
-            "price": 830000.0,
+            "price": 880000.0,
             "pe": "---",
             "growth": "66.1%",
-            "rsi": 44.15,
-            "volume_ratio": 1.13,
+            "rsi": 42.99,
+            "volume_ratio": 0.43,
             "chips": "☁️ 盤整",
-            "support": 733555.72,
-            "pressure": 926444.28,
-            "atr": 47857.14,
-            "turnover_zone": 821700.0,
-            "buy_point": 752844.57,
-            "dynamic_stop": 710357.14,
-            "stop_profit_line": 905010.0
+            "support": 781847.41,
+            "pressure": 978152.59,
+            "atr": 46071.43,
+            "turnover_zone": 871200.0,
+            "buy_point": 801477.93,
+            "dynamic_stop": 764821.43,
+            "stop_profit_line": 870090.0
         },
         "2303.TW": {
             "name": "聯電",
