@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-04-18 00:04:31",
+    "last_update": "2026-04-18 05:53:54",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -23,7 +23,7 @@
             "pe": 41.16,
             "growth": "73.2%",
             "rsi": 92.81,
-            "volume_ratio": 0.99,
+            "volume_ratio": 1.03,
             "chips": "🔥 強勢",
             "support": 185.58,
             "pressure": 217.78,
@@ -36,7 +36,7 @@
         "MU": {
             "name": "美光",
             "price": 455.07,
-            "pe": 21.5,
+            "pe": 21.46,
             "growth": "196.3%",
             "rsi": 74.86,
             "volume_ratio": 0.83,
