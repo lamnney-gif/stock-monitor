@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-04-22 18:16:22",
+    "last_update": "2026-04-22 21:12:25",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -19,35 +19,35 @@
         },
         "NVDA": {
             "name": "輝達",
-            "price": 202.04,
-            "pe": 41.23,
+            "price": 202.5,
+            "pe": 41.33,
             "growth": "73.2%",
-            "rsi": 91.48,
-            "volume_ratio": 0.48,
+            "rsi": 91.6,
+            "volume_ratio": 0.75,
             "chips": "🔥 強勢",
-            "support": 183.49,
-            "pressure": 220.59,
+            "support": 183.9,
+            "pressure": 221.1,
             "atr": 4.21,
-            "turnover_zone": 200.02,
-            "buy_point": 187.2,
-            "dynamic_stop": 191.53,
-            "stop_profit_line": 196.0
+            "turnover_zone": 200.48,
+            "buy_point": 187.62,
+            "dynamic_stop": 191.98,
+            "stop_profit_line": 196.42
         },
         "MU": {
             "name": "美光",
-            "price": 483.97,
-            "pe": 22.82,
+            "price": 487.48,
+            "pe": 22.98,
             "growth": "196.3%",
-            "rsi": 86.74,
-            "volume_ratio": 1.02,
+            "rsi": 87.03,
+            "volume_ratio": 1.36,
             "chips": "🔥 強勢",
-            "support": 412.06,
-            "pressure": 555.88,
-            "atr": 21.93,
-            "turnover_zone": 479.13,
-            "buy_point": 426.45,
-            "dynamic_stop": 429.14,
-            "stop_profit_line": 469.45
+            "support": 415.12,
+            "pressure": 559.84,
+            "atr": 22.29,
+            "turnover_zone": 482.61,
+            "buy_point": 429.59,
+            "dynamic_stop": 431.76,
+            "stop_profit_line": 472.86
         },
         "000660.KS": {
             "name": "海力士",
@@ -68,7 +68,7 @@
         "2303.TW": {
             "name": "聯電",
             "price": 78.6,
-            "pe": 23.75,
+            "pe": 23.05,
             "growth": "2.4%",
             "rsi": 80.44,
             "volume_ratio": 0.73,
