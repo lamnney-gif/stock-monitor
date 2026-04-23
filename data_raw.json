@@ -1,10 +1,10 @@
 {
-    "last_update": "2026-04-23 20:13:58",
+    "last_update": "2026-04-23 22:29:57",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
             "price": 2080.0,
-            "pe": 28.26,
+            "pe": 28.25,
             "growth": "35.1%",
             "rsi": 74.73,
             "volume_ratio": 1.65,
@@ -39,7 +39,7 @@
             "pe": 22.71,
             "growth": "196.3%",
             "rsi": 84.85,
-            "volume_ratio": 1.07,
+            "volume_ratio": 1.09,
             "chips": "🔥 強勢",
             "support": 405.79,
             "pressure": 557.65,
@@ -68,7 +68,7 @@
         "2303.TW": {
             "name": "聯電",
             "price": 73.6,
-            "pe": 23.74,
+            "pe": 22.24,
             "growth": "2.4%",
             "rsi": 70.05,
             "volume_ratio": 0.69,
@@ -100,7 +100,7 @@
         "2344.TW": {
             "name": "華邦電",
             "price": 87.8,
-            "pe": 103.29,
+            "pe": 99.77,
             "growth": "42.4%",
             "rsi": 42.49,
             "volume_ratio": 1.27,
