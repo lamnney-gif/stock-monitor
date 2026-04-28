@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-04-28 20:53:31",
+    "last_update": "2026-04-28 21:46:30",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -23,7 +23,7 @@
             "pe": 43.5,
             "growth": "73.2%",
             "rsi": 81.67,
-            "volume_ratio": 1.19,
+            "volume_ratio": 1.23,
             "chips": "🔥 強勢",
             "support": 193.73,
             "pressure": 232.61,
@@ -39,7 +39,7 @@
             "pe": 23.8,
             "growth": "196.3%",
             "rsi": 75.96,
-            "volume_ratio": 1.15,
+            "volume_ratio": 1.16,
             "chips": "🔥 強勢",
             "support": 426.8,
             "pressure": 581.78,
