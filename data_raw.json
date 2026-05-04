@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-05-03 23:24:30",
+    "last_update": "2026-05-04 00:07:38",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -57,11 +57,11 @@
             "rsi": 87.11,
             "volume_ratio": 0.88,
             "chips": "🔥 強勢",
-            "support": 1079855.62,
-            "pressure": 1492144.38,
+            "support": NaN,
+            "pressure": NaN,
             "atr": 44285.71,
             "turnover_zone": 1273140.0,
-            "buy_point": 1121084.49,
+            "buy_point": NaN,
             "dynamic_stop": 1175285.71,
             "stop_profit_line": 1261000.0
         },
