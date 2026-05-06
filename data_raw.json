@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-05-06 06:22:33",
+    "last_update": "2026-05-06 08:42:21",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -36,7 +36,7 @@
         "MU": {
             "name": "美光",
             "price": 640.2,
-            "pe": 30.18,
+            "pe": 30.21,
             "growth": "196.3%",
             "rsi": 85.9,
             "volume_ratio": 1.54,
@@ -51,19 +51,19 @@
         },
         "000660.KS": {
             "name": "海力士",
-            "price": 1612500.0,
+            "price": 1601000.0,
             "pe": "---",
             "growth": "198.1%",
-            "rsi": 92.49,
-            "volume_ratio": 1.37,
+            "rsi": 92.35,
+            "volume_ratio": 1.63,
             "chips": "🔥 強勢",
-            "support": 1370845.06,
-            "pressure": 1854154.94,
-            "atr": 49714.29,
-            "turnover_zone": 1596375.0,
-            "buy_point": 1419176.05,
-            "dynamic_stop": 1488214.29,
-            "stop_profit_line": 1564125.0
+            "support": 1361699.27,
+            "pressure": 1840300.73,
+            "atr": 49785.71,
+            "turnover_zone": 1584990.0,
+            "buy_point": 1409559.42,
+            "dynamic_stop": 1476535.71,
+            "stop_profit_line": 1552970.0
         },
         "2303.TW": {
             "name": "聯電",
