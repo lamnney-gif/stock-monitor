@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-05-08 06:13:48",
+    "last_update": "2026-05-08 07:57:42",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -51,19 +51,19 @@
         },
         "000660.KS": {
             "name": "海力士",
-            "price": 1679000.0,
+            "price": 1686000.0,
             "pe": "---",
             "growth": "198.1%",
-            "rsi": 92.67,
-            "volume_ratio": 0.69,
+            "rsi": 92.75,
+            "volume_ratio": 0.88,
             "chips": "🔥 強勢",
-            "support": 1382891.1,
-            "pressure": 1975108.9,
-            "atr": 58142.86,
-            "turnover_zone": 1662210.0,
-            "buy_point": 1442112.88,
-            "dynamic_stop": 1533642.86,
-            "stop_profit_line": 1628630.0
+            "support": 1388711.03,
+            "pressure": 1983288.97,
+            "atr": 58500.0,
+            "turnover_zone": 1669140.0,
+            "buy_point": 1448168.82,
+            "dynamic_stop": 1539750.0,
+            "stop_profit_line": 1635420.0
         },
         "2303.TW": {
             "name": "聯電",
