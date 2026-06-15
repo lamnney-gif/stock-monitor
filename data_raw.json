@@ -1,10 +1,10 @@
 {
-    "last_update": "2026-06-15 18:53:22",
+    "last_update": "2026-06-15 21:37:42",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
             "price": 2375.0,
-            "pe": 31.35,
+            "pe": 32.26,
             "growth": "35.1%",
             "rsi": 61.57,
             "volume_ratio": 0.72,
@@ -22,8 +22,8 @@
             "price": 212.45,
             "pe": 32.53,
             "growth": "85.2%",
-            "rsi": 48.48,
-            "volume_ratio": 0.6,
+            "rsi": 48.49,
+            "volume_ratio": 0.86,
             "chips": "☁️ 盤整",
             "support": 202.02,
             "pressure": 222.88,
@@ -31,23 +31,23 @@
             "turnover_zone": 210.33,
             "buy_point": 204.11,
             "dynamic_stop": 193.9,
-            "stop_profit_line": 206.07
+            "stop_profit_line": 206.08
         },
         "MU": {
             "name": "美光",
-            "price": 1094.09,
-            "pe": 51.6,
+            "price": 1087.99,
+            "pe": 51.32,
             "growth": "196.3%",
-            "rsi": 62.67,
-            "volume_ratio": 0.57,
+            "rsi": 62.37,
+            "volume_ratio": 0.78,
             "chips": "🔥 強勢",
-            "support": 903.5,
-            "pressure": 1284.68,
+            "support": 898.08,
+            "pressure": 1277.9,
             "atr": 65.61,
-            "turnover_zone": 1083.15,
-            "buy_point": 941.61,
-            "dynamic_stop": 930.06,
-            "stop_profit_line": 1061.27
+            "turnover_zone": 1077.11,
+            "buy_point": 936.06,
+            "dynamic_stop": 923.96,
+            "stop_profit_line": 1055.35
         },
         "000660.KS": {
             "name": "海力士",
@@ -68,7 +68,7 @@
         "2303.TW": {
             "name": "聯電",
             "price": 141.5,
-            "pe": 35.91,
+            "pe": 33.93,
             "growth": "5.5%",
             "rsi": 55.79,
             "volume_ratio": 0.93,
@@ -100,7 +100,7 @@
         "2344.TW": {
             "name": "華邦電",
             "price": 189.0,
-            "pe": 214.77,
+            "pe": 196.88,
             "growth": "91.3%",
             "rsi": 66.0,
             "volume_ratio": 1.12,
@@ -132,7 +132,7 @@
         "1303.TW": {
             "name": "南亞",
             "price": 117.0,
-            "pe": 201.72,
+            "pe": 185.71,
             "growth": "4.6%",
             "rsi": 67.24,
             "volume_ratio": 1.54,
