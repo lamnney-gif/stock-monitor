@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-07-07 23:36:08",
+    "last_update": "2026-07-08 01:06:04",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -39,7 +39,7 @@
             "pe": 21.22,
             "growth": "345.7%",
             "rsi": 41.91,
-            "volume_ratio": 1.02,
+            "volume_ratio": 1.03,
             "chips": "☁️ 盤整",
             "support": 797.78,
             "pressure": 1078.98,
@@ -51,35 +51,35 @@
         },
         "000660.KS": {
             "name": "海力士",
-            "price": 2201000.0,
+            "price": 2276000.0,
             "pe": "---",
             "growth": "198.1%",
-            "rsi": 43.22,
-            "volume_ratio": 1.08,
+            "rsi": 41.0,
+            "volume_ratio": 0.25,
             "chips": "☁️ 盤整",
-            "support": 1808772.79,
-            "pressure": 2593227.21,
-            "atr": 250571.43,
-            "turnover_zone": 2178990.0,
-            "buy_point": 1887218.23,
-            "dynamic_stop": 1574571.43,
-            "stop_profit_line": 2483200.0
+            "support": 1906793.03,
+            "pressure": 2645206.97,
+            "atr": 251928.57,
+            "turnover_zone": 2253240.0,
+            "buy_point": 1980634.42,
+            "dynamic_stop": 1646178.57,
+            "stop_profit_line": 2352250.0
         },
         "2303.TW": {
             "name": "聯電",
-            "price": 152.39,
-            "pe": 39.44,
+            "price": NaN,
+            "pe": 39.34,
             "growth": "5.5%",
-            "rsi": 58.43,
-            "volume_ratio": 0.59,
+            "rsi": 59.15,
+            "volume_ratio": 0.0,
             "chips": "☁️ 盤整",
-            "support": 125.39,
-            "pressure": 179.39,
-            "atr": 9.55,
-            "turnover_zone": 150.87,
-            "buy_point": 130.79,
-            "dynamic_stop": 128.51,
-            "stop_profit_line": 162.6
+            "support": NaN,
+            "pressure": NaN,
+            "atr": NaN,
+            "turnover_zone": NaN,
+            "buy_point": NaN,
+            "dynamic_stop": NaN,
+            "stop_profit_line": NaN
         },
         "6770.TW": {
             "name": "力積電",
@@ -100,7 +100,7 @@
         "2344.TW": {
             "name": "華邦電",
             "price": 174.0,
-            "pe": 197.73,
+            "pe": 195.51,
             "growth": "91.3%",
             "rsi": 39.82,
             "volume_ratio": 0.77,
@@ -131,19 +131,19 @@
         },
         "1303.TW": {
             "name": "南亞",
-            "price": 165.7,
+            "price": NaN,
             "pe": 292.11,
             "growth": "4.6%",
-            "rsi": 70.04,
-            "volume_ratio": 0.94,
+            "rsi": 67.09,
+            "volume_ratio": 0.0,
             "chips": "🔥 強勢",
-            "support": 116.94,
-            "pressure": 214.46,
-            "atr": 12.44,
-            "turnover_zone": 164.04,
-            "buy_point": 126.69,
-            "dynamic_stop": 134.6,
-            "stop_profit_line": 190.17
+            "support": NaN,
+            "pressure": NaN,
+            "atr": NaN,
+            "turnover_zone": NaN,
+            "buy_point": NaN,
+            "dynamic_stop": NaN,
+            "stop_profit_line": NaN
         }
     }
 }
