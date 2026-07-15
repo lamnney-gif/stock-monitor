@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-07-15 11:09:32",
+    "last_update": "2026-07-15 12:40:12",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -20,7 +20,7 @@
         "NVDA": {
             "name": "輝達",
             "price": NaN,
-            "pe": 31.15,
+            "pe": 32.48,
             "growth": "85.2%",
             "rsi": 53.75,
             "volume_ratio": 0.92,
