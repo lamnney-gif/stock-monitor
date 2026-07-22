@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-07-22 18:18:36",
+    "last_update": "2026-07-22 19:47:29",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -19,35 +19,35 @@
         },
         "NVDA": {
             "name": "輝達",
-            "price": 213.71,
-            "pe": 32.73,
+            "price": 212.41,
+            "pe": 32.53,
             "growth": "85.2%",
-            "rsi": 63.77,
-            "volume_ratio": 0.75,
+            "rsi": 62.96,
+            "volume_ratio": 0.91,
             "chips": "🔥 強勢",
-            "support": 203.87,
-            "pressure": 223.55,
+            "support": 202.74,
+            "pressure": 222.08,
             "atr": 7.21,
-            "turnover_zone": 211.57,
-            "buy_point": 205.84,
-            "dynamic_stop": 195.69,
-            "stop_profit_line": 207.29
+            "turnover_zone": 210.29,
+            "buy_point": 204.68,
+            "dynamic_stop": 194.39,
+            "stop_profit_line": 206.04
         },
         "MU": {
             "name": "美光",
-            "price": 969.23,
-            "pe": 21.9,
+            "price": 971.89,
+            "pe": 21.95,
             "growth": "345.7%",
-            "rsi": 44.0,
-            "volume_ratio": 0.44,
+            "rsi": 44.25,
+            "volume_ratio": 0.51,
             "chips": "☁️ 盤整",
-            "support": 816.95,
-            "pressure": 1121.51,
+            "support": 819.65,
+            "pressure": 1124.13,
             "atr": 60.44,
-            "turnover_zone": 959.54,
-            "buy_point": 847.4,
-            "dynamic_stop": 818.12,
-            "stop_profit_line": 941.7
+            "turnover_zone": 962.17,
+            "buy_point": 850.1,
+            "dynamic_stop": 820.78,
+            "stop_profit_line": 942.73
         },
         "000660.KS": {
             "name": "海力士",
