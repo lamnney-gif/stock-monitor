@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-07-24 12:05:14",
+    "last_update": "2026-07-24 14:04:45",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -19,34 +19,34 @@
         },
         "NVDA": {
             "name": "輝達",
-            "price": 208.76,
-            "pe": 31.97,
+            "price": 207.02,
+            "pe": 31.54,
             "growth": "85.2%",
-            "rsi": 62.12,
-            "volume_ratio": 0.92,
-            "chips": "🔥 強勢",
-            "support": 198.98,
-            "pressure": 218.54,
-            "atr": 7.01,
-            "turnover_zone": 206.67,
-            "buy_point": 200.93,
-            "dynamic_stop": 191.24,
+            "rsi": 59.81,
+            "volume_ratio": 0.11,
+            "chips": "☁️ 盤整",
+            "support": 197.47,
+            "pressure": 216.57,
+            "atr": 6.96,
+            "turnover_zone": 204.95,
+            "buy_point": 199.38,
+            "dynamic_stop": 189.62,
             "stop_profit_line": 205.7
         },
         "MU": {
             "name": "美光",
-            "price": 990.21,
-            "pe": 22.37,
+            "price": 927.79,
+            "pe": 21.1,
             "growth": "345.7%",
-            "rsi": 51.46,
-            "volume_ratio": 0.87,
+            "rsi": 44.92,
+            "volume_ratio": 0.18,
             "chips": "☁️ 盤整",
-            "support": 838.95,
-            "pressure": 1141.47,
-            "atr": 55.66,
-            "turnover_zone": 980.31,
-            "buy_point": 869.2,
-            "dynamic_stop": 851.06,
+            "support": 797.51,
+            "pressure": 1058.07,
+            "atr": 55.75,
+            "turnover_zone": 918.51,
+            "buy_point": 823.57,
+            "dynamic_stop": 788.41,
             "stop_profit_line": 960.5
         },
         "000660.KS": {
@@ -55,7 +55,7 @@
             "pe": "---",
             "growth": "198.1%",
             "rsi": 30.2,
-            "volume_ratio": 1.08,
+            "volume_ratio": 0.99,
             "chips": "💀 轉弱",
             "support": 1291063.4,
             "pressure": 2226936.6,
@@ -80,22 +80,6 @@
             "buy_point": 112.79,
             "dynamic_stop": 105.73,
             "stop_profit_line": 134.83
-        },
-        "6770.TW": {
-            "name": "力積電",
-            "price": 61.6,
-            "pe": 36.67,
-            "growth": "22.1%",
-            "rsi": 35.53,
-            "volume_ratio": 0.89,
-            "chips": "💀 轉弱",
-            "support": 54.21,
-            "pressure": 68.99,
-            "atr": 3.83,
-            "turnover_zone": 60.98,
-            "buy_point": 55.69,
-            "dynamic_stop": 52.03,
-            "stop_profit_line": 65.86
         },
         "2344.TW": {
             "name": "華邦電",
@@ -128,22 +112,6 @@
             "buy_point": 41.06,
             "dynamic_stop": 40.63,
             "stop_profit_line": 50.92
-        },
-        "1303.TW": {
-            "name": "南亞",
-            "price": 177.5,
-            "pe": 311.4,
-            "growth": "4.6%",
-            "rsi": 48.1,
-            "volume_ratio": 0.63,
-            "chips": "☁️ 盤整",
-            "support": 149.53,
-            "pressure": 205.47,
-            "atr": 15.46,
-            "turnover_zone": 175.72,
-            "buy_point": 155.12,
-            "dynamic_stop": 138.86,
-            "stop_profit_line": 201.76
         }
     }
 }
