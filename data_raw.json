@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-07-29 20:00:45",
+    "last_update": "2026-07-29 21:00:07",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -23,7 +23,7 @@
             "pe": 29.14,
             "growth": "85.2%",
             "rsi": 40.41,
-            "volume_ratio": 0.91,
+            "volume_ratio": 1.05,
             "chips": "☁️ 盤整",
             "support": 180.06,
             "pressure": 199.96,
@@ -35,18 +35,18 @@
         },
         "MU": {
             "name": "美光",
-            "price": 737.91,
-            "pe": 16.68,
+            "price": 739.0,
+            "pe": 16.71,
             "growth": "345.7%",
-            "rsi": 30.52,
-            "volume_ratio": 1.39,
+            "rsi": 30.57,
+            "volume_ratio": 1.52,
             "chips": "💀 轉弱",
-            "support": 630.1,
-            "pressure": 845.72,
+            "support": 631.41,
+            "pressure": 846.59,
             "atr": 63.59,
-            "turnover_zone": 730.53,
-            "buy_point": 651.66,
-            "dynamic_stop": 578.93,
+            "turnover_zone": 731.61,
+            "buy_point": 652.93,
+            "dynamic_stop": 580.02,
             "stop_profit_line": 960.5
         },
         "000660.KS": {
