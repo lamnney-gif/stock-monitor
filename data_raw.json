@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-07-30 10:48:53",
+    "last_update": "2026-07-30 12:16:33",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -20,7 +20,7 @@
         "NVDA": {
             "name": "輝達",
             "price": 190.01,
-            "pe": 29.05,
+            "pe": 30.21,
             "growth": "85.2%",
             "rsi": 40.41,
             "volume_ratio": 1.13,
@@ -55,7 +55,7 @@
             "pe": "---",
             "growth": "256.8%",
             "rsi": 25.65,
-            "volume_ratio": 1.42,
+            "volume_ratio": 1.49,
             "chips": "💀 轉弱",
             "support": 883367.72,
             "pressure": 1760632.28,
@@ -69,7 +69,7 @@
             "name": "聯電",
             "price": 110.0,
             "pe": 16.69,
-            "growth": "5.5%",
+            "growth": "17.0%",
             "rsi": 28.9,
             "volume_ratio": 2.09,
             "chips": "💀 轉弱",
