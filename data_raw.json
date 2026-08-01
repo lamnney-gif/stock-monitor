@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-08-01 01:08:20",
+    "last_update": "2026-08-01 04:31:02",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -20,10 +20,10 @@
         "NVDA": {
             "name": "輝達",
             "price": 200.75,
-            "pe": 30.74,
+            "pe": 29.83,
             "growth": "85.2%",
             "rsi": 47.75,
-            "volume_ratio": 1.02,
+            "volume_ratio": 1.03,
             "chips": "☁️ 盤整",
             "support": 190.98,
             "pressure": 210.52,
@@ -36,10 +36,10 @@
         "MU": {
             "name": "美光",
             "price": 823.03,
-            "pe": 18.6,
+            "pe": 19.76,
             "growth": "345.7%",
             "rsi": 42.72,
-            "volume_ratio": 0.94,
+            "volume_ratio": 0.96,
             "chips": "☁️ 盤整",
             "support": 717.97,
             "pressure": 928.09,
