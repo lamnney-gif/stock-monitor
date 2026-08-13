@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-08-13 22:20:39",
+    "last_update": "2026-08-13 23:06:39",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -67,19 +67,19 @@
         },
         "2303.TW": {
             "name": "聯電",
-            "price": NaN,
+            "price": 124.5,
             "pe": 18.89,
             "growth": "17.0%",
-            "rsi": 46.09,
-            "volume_ratio": 1.53,
+            "rsi": 47.33,
+            "volume_ratio": 1.52,
             "chips": "☁️ 盤整",
-            "support": NaN,
-            "pressure": NaN,
-            "atr": NaN,
-            "turnover_zone": NaN,
-            "buy_point": NaN,
-            "dynamic_stop": NaN,
-            "stop_profit_line": NaN
+            "support": 109.41,
+            "pressure": 139.59,
+            "atr": 6.25,
+            "turnover_zone": 123.26,
+            "buy_point": 112.43,
+            "dynamic_stop": 108.88,
+            "stop_profit_line": 120.76
         },
         "6770.TW": {
             "name": "力積電",
@@ -115,35 +115,35 @@
         },
         "3481.TW": {
             "name": "群創",
-            "price": NaN,
+            "price": 49.4,
             "pe": 449.09,
             "growth": "19.2%",
-            "rsi": 51.7,
+            "rsi": 49.82,
             "volume_ratio": 0.73,
             "chips": "☁️ 盤整",
-            "support": NaN,
-            "pressure": NaN,
-            "atr": NaN,
-            "turnover_zone": NaN,
-            "buy_point": NaN,
-            "dynamic_stop": NaN,
-            "stop_profit_line": NaN
+            "support": 44.48,
+            "pressure": 54.32,
+            "atr": 3.29,
+            "turnover_zone": 48.91,
+            "buy_point": 45.46,
+            "dynamic_stop": 41.19,
+            "stop_profit_line": 50.73
         },
         "1303.TW": {
             "name": "南亞",
-            "price": NaN,
+            "price": 189.0,
             "pe": 81.82,
             "growth": "4.6%",
             "rsi": 56.28,
-            "volume_ratio": 1.02,
+            "volume_ratio": 1.01,
             "chips": "☁️ 盤整",
-            "support": NaN,
-            "pressure": NaN,
-            "atr": NaN,
-            "turnover_zone": NaN,
-            "buy_point": NaN,
-            "dynamic_stop": NaN,
-            "stop_profit_line": NaN
+            "support": 162.22,
+            "pressure": 215.78,
+            "atr": 12.14,
+            "turnover_zone": 187.11,
+            "buy_point": 167.58,
+            "dynamic_stop": 158.64,
+            "stop_profit_line": 184.3
         }
     }
 }
