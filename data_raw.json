@@ -1,10 +1,10 @@
 {
-    "last_update": "2026-09-08 20:06:54",
+    "last_update": "2026-09-08 22:34:43",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
             "price": 2470.0,
-            "pe": 28.85,
+            "pe": 28.73,
             "growth": "36.0%",
             "rsi": 67.65,
             "volume_ratio": 1.51,
@@ -23,7 +23,7 @@
             "pe": 28.57,
             "growth": "105.9%",
             "rsi": 54.15,
-            "volume_ratio": 0.85,
+            "volume_ratio": 0.9,
             "chips": "☁️ 盤整",
             "support": 216.38,
             "pressure": 235.08,
@@ -39,7 +39,7 @@
             "pe": 22.62,
             "growth": "345.7%",
             "rsi": 60.3,
-            "volume_ratio": 0.96,
+            "volume_ratio": 1.01,
             "chips": "🔥 強勢",
             "support": 947.56,
             "pressure": 1052.96,
@@ -84,7 +84,7 @@
         "6770.TW": {
             "name": "力積電",
             "price": 72.4,
-            "pe": 24.79,
+            "pe": 24.97,
             "growth": "53.3%",
             "rsi": 63.84,
             "volume_ratio": 1.31,
@@ -132,7 +132,7 @@
         "1303.TW": {
             "name": "南亞",
             "price": 235.0,
-            "pe": 37.9,
+            "pe": 37.18,
             "growth": "27.3%",
             "rsi": 67.27,
             "volume_ratio": 0.65,
