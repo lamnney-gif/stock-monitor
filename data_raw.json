@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-09-20 21:35:54",
+    "last_update": "2026-09-20 23:28:22",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -7,14 +7,14 @@
             "pe": 28.73,
             "growth": "36.0%",
             "rsi": 54.29,
-            "volume_ratio": 0.26,
+            "volume_ratio": 0.0,
             "chips": "☁️ 盤整",
             "support": 2412.82,
             "pressure": 2507.18,
-            "atr": 44.94,
+            "atr": 25.66,
             "turnover_zone": 2435.4,
             "buy_point": 2422.26,
-            "dynamic_stop": 2347.64,
+            "dynamic_stop": 2395.86,
             "stop_profit_line": 2386.2
         },
         "NVDA": {
@@ -67,19 +67,19 @@
         },
         "2303.TW": {
             "name": "聯電",
-            "price": 157.0,
-            "pe": 23.86,
+            "price": 156.0,
+            "pe": 23.71,
             "growth": "17.0%",
-            "rsi": 69.29,
-            "volume_ratio": 0.2,
+            "rsi": 68.8,
+            "volume_ratio": 0.0,
             "chips": "🔥 強勢",
-            "support": 141.1,
-            "pressure": 172.9,
-            "atr": 7.54,
-            "turnover_zone": 155.43,
-            "buy_point": 144.28,
-            "dynamic_stop": 138.16,
-            "stop_profit_line": 152.29
+            "support": 140.25,
+            "pressure": 171.75,
+            "atr": 5.71,
+            "turnover_zone": 154.44,
+            "buy_point": 143.4,
+            "dynamic_stop": 141.71,
+            "stop_profit_line": 151.32
         },
         "6770.TW": {
             "name": "力積電",
