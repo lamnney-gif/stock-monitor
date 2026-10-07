@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-10-06 20:34:33",
+    "last_update": "2026-10-07 00:03:02",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -19,35 +19,35 @@
         },
         "NVDA": {
             "name": "輝達",
-            "price": 239.24,
+            "price": NaN,
             "pe": 30.25,
             "growth": "105.9%",
-            "rsi": 84.04,
-            "volume_ratio": 0.86,
+            "rsi": 83.89,
+            "volume_ratio": 0.87,
             "chips": "🔥 強勢",
-            "support": 227.43,
-            "pressure": 251.05,
-            "atr": 4.53,
-            "turnover_zone": 236.85,
-            "buy_point": 229.79,
-            "dynamic_stop": 227.91,
-            "stop_profit_line": 232.06
+            "support": NaN,
+            "pressure": NaN,
+            "atr": NaN,
+            "turnover_zone": NaN,
+            "buy_point": NaN,
+            "dynamic_stop": NaN,
+            "stop_profit_line": NaN
         },
         "MU": {
             "name": "美光",
-            "price": 1045.56,
+            "price": NaN,
             "pe": 14.07,
             "growth": "379.3%",
-            "rsi": 68.15,
-            "volume_ratio": 0.73,
+            "rsi": 72.2,
+            "volume_ratio": 0.76,
             "chips": "🔥 強勢",
-            "support": 958.68,
-            "pressure": 1132.44,
-            "atr": 38.97,
-            "turnover_zone": 1035.1,
-            "buy_point": 976.05,
-            "dynamic_stop": 948.13,
-            "stop_profit_line": 1064.47
+            "support": NaN,
+            "pressure": NaN,
+            "atr": NaN,
+            "turnover_zone": NaN,
+            "buy_point": NaN,
+            "dynamic_stop": NaN,
+            "stop_profit_line": NaN
         },
         "000660.KS": {
             "name": "海力士",
@@ -84,7 +84,7 @@
         "6770.TW": {
             "name": "力積電",
             "price": 74.3,
-            "pe": 23.07,
+            "pe": 23.51,
             "growth": "53.3%",
             "rsi": 57.56,
             "volume_ratio": 0.57,
@@ -116,7 +116,7 @@
         "3481.TW": {
             "name": "群創",
             "price": 51.1,
-            "pe": 65.51,
+            "pe": 67.24,
             "growth": "13.3%",
             "rsi": 60.68,
             "volume_ratio": 0.39,
