@@ -1,5 +1,5 @@
 {
-    "last_update": "2026-10-08 21:31:44",
+    "last_update": "2026-10-09 01:20:58",
     "stocks": {
         "2330.TW": {
             "name": "台積電",
@@ -19,35 +19,35 @@
         },
         "NVDA": {
             "name": "輝達",
-            "price": 230.48,
+            "price": NaN,
             "pe": 29.14,
             "growth": "105.9%",
-            "rsi": 60.91,
+            "rsi": 74.82,
             "volume_ratio": 1.08,
             "chips": "🔥 強勢",
-            "support": 218.12,
-            "pressure": 242.84,
-            "atr": 4.71,
-            "turnover_zone": 228.18,
-            "buy_point": 220.59,
-            "dynamic_stop": 218.71,
-            "stop_profit_line": 232.06
+            "support": NaN,
+            "pressure": NaN,
+            "atr": NaN,
+            "turnover_zone": NaN,
+            "buy_point": NaN,
+            "dynamic_stop": NaN,
+            "stop_profit_line": NaN
         },
         "MU": {
             "name": "美光",
-            "price": 1035.84,
+            "price": NaN,
             "pe": 13.94,
             "growth": "379.3%",
-            "rsi": 53.01,
+            "rsi": 62.85,
             "volume_ratio": 1.02,
-            "chips": "☁️ 盤整",
-            "support": 948.95,
-            "pressure": 1122.73,
-            "atr": 43.47,
-            "turnover_zone": 1025.48,
-            "buy_point": 966.33,
-            "dynamic_stop": 927.18,
-            "stop_profit_line": 1055.36
+            "chips": "🔥 強勢",
+            "support": NaN,
+            "pressure": NaN,
+            "atr": NaN,
+            "turnover_zone": NaN,
+            "buy_point": NaN,
+            "dynamic_stop": NaN,
+            "stop_profit_line": NaN
         },
         "000660.KS": {
             "name": "海力士",
@@ -132,7 +132,7 @@
         "1303.TW": {
             "name": "南亞",
             "price": 310.0,
-            "pe": 50.99,
+            "pe": 50.32,
             "growth": "27.3%",
             "rsi": 85.54,
             "volume_ratio": 0.86,
